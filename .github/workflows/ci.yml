@@ -1,0 +1,28 @@
+name: Maven CI
+
+on:
+  schedule:
+    - cron: '42 0 * * 1'
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  release:
+    types:
+      - published
+
+jobs:
+  build:
+    uses: jonasrutishauser/parent/.github/workflows/common-ci.yml@v31
+    with:
+      java-versions: '["17", "21", "24"]'
+      deploy-site: ${{ github.event_name == 'push' }}
+      publish-test-report: true
+      publish-coverage-report: true
+      store-logs-path: '**/target/liberty/wlp/usr/servers/*/logs/**/*.log'
+      sonar-report: true
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

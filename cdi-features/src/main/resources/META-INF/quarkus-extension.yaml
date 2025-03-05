@@ -1,0 +1,9 @@
+name: CDI Features
+metadata:
+  short-name: cdi-features
+  keywords:
+    - features
+    - cdi
+  categories:
+    - cdi
+  status: preview

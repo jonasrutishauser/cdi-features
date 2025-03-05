@@ -1,0 +1,22 @@
+name: Maven Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-body:
+        description: 'Text describing the contents of the release.'
+        required: false
+        default: ''
+
+jobs:
+  release:
+    uses: jonasrutishauser/parent/.github/workflows/common-release.yml@v31
+    with:
+      name: 'CDI Features'
+      java-version: '17'
+      release-body: ${{ github.event.inputs.release-body }}
+    secrets:
+      MAVEN_GPG_PRIVATE_KEY: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+      MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+      CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+      CENTRAL_TOKEN: ${{ secrets.CENTRAL_TOKEN }}
