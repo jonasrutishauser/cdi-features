@@ -13,6 +13,11 @@ on:
     types:
       - published
 
+permissions:
+  checks: write
+  security-events: write
+  contents: write
+
 jobs:
   build:
     uses: jonasrutishauser/parent/.github/workflows/common-ci.yml@v31
