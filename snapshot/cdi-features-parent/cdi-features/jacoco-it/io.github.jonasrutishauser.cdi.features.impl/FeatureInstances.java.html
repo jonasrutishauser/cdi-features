@@ -40,8 +40,8 @@ class FeatureInstances&lt;T&gt; {
 <span class="fc bfc" id="L40" title="All 2 branches covered.">            if (selector == null) {</span>
 <span class="fc" id="L41">                return null;</span>
             }
-<span class="fc bfc" id="L43" title="All 2 branches covered.">            if (selector instanceof Selector) {</span>
-<span class="fc" id="L44">                return ((Selector) selector).selected();</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">            if (selector instanceof Selector s) {</span>
+<span class="fc" id="L44">                return s.selected();</span>
             }
 <span class="fc" id="L46">            return selector.selected(new Context() {</span>
                 @Override

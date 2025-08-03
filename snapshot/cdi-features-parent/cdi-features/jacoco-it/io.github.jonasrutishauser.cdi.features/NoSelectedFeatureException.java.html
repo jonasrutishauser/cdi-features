@@ -7,7 +7,7 @@ public class NoSelectedFeatureException extends IllegalStateException {
 
     private static final long serialVersionUID = 1L;
 
-    private final Contextual&lt;?&gt; contextual;
+    private final transient Contextual&lt;?&gt; contextual;
 
     public NoSelectedFeatureException(Contextual&lt;?&gt; contextual) {
 <span class="nc" id="L13">        super(getMessage(contextual));</span>

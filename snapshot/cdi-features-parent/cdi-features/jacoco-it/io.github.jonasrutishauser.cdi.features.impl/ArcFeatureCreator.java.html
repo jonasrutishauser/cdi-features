@@ -6,12 +6,16 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.util.TypeLiteral;
 
-<span class="nc" id="L9">public class ArcFeatureCreator {</span>
+public class ArcFeatureCreator {
+
+    private ArcFeatureCreator() {
+        // Utility class, no instantiation
+    }
 
     public static &lt;T&gt; T create(SyntheticCreationalContext&lt;T&gt; context, TypeLiteral&lt;Instance&lt;T&gt;&gt; instanceType,
             Bean&lt;T&gt; ownBean, Feature featureLiteral) {
-<span class="fc" id="L13">        Instance&lt;T&gt; instance = context.getInjectedReference(instanceType, featureLiteral);</span>
-<span class="fc" id="L14">        return FeatureCreator.create(ownBean, instance.handlesStream(), context::getInjectedReference);</span>
+<span class="fc" id="L17">        Instance&lt;T&gt; instance = context.getInjectedReference(instanceType, featureLiteral);</span>
+<span class="fc" id="L18">        return FeatureCreator.create(ownBean, instance.handlesStream(), context::getInjectedReference);</span>
     }
 
 }
