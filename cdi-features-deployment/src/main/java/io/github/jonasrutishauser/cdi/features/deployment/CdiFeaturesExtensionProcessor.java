@@ -112,7 +112,7 @@ public class CdiFeaturesExtensionProcessor {
         boolean configurationSelectorAdded = false;
         for (BeanInfo featureBean : discoveryFinished.beanStream().assignableTo(beanType, featureAnnotation)
                 .collect()) {
-            AnnotationInstance feature = featureBean.getQualifier(DotName.createSimple(Feature.class)).get();
+            AnnotationInstance feature = featureBean.getQualifier(DotName.createSimple(Feature.class)).orElseThrow();
             AnnotationValue selectorValue = feature.value("selector");
             AnnotationValue propertyKeyValue = feature.value("propertyKey");
             if (selectorValue != null && !selectorClass.equals(selectorValue.asClass())) {

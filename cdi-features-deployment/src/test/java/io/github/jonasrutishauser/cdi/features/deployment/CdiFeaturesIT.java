@@ -56,7 +56,7 @@ class CdiFeaturesIT {
     @RepeatedTest(3)
     @SetSystemProperty(key = "cache.io.github.jonasrutishauser.cdi.features.AbstractIT$SampleFeature.millis", value="1")
     @SetSystemProperty(key = "feature", value = "31")
-    public void sampleFeature1() {
+    void sampleFeature1() {
         setSelected(1);
 
         assertEquals("SampleFeature1", sampleFeature.test());
@@ -65,7 +65,7 @@ class CdiFeaturesIT {
 
     @RepeatedTest(3)
     @SetSystemProperty(key = "feature", value = "32")
-    public void sampleFeature2() {
+    void sampleFeature2() {
         setSelected(2);
 
         assertEquals("SampleFeature2", sampleFeature.test());
@@ -74,7 +74,7 @@ class CdiFeaturesIT {
 
     @RepeatedTest(3)
     @SetSystemProperty(key = "feature", value = "3")
-    public void sampleFeature3() {
+    void sampleFeature3() {
         setSelected(42);
 
         assertEquals("SampleFeature3", sampleFeature.test());
@@ -83,7 +83,7 @@ class CdiFeaturesIT {
 
     @RepeatedTest(3)
     @SetSystemProperty(key = "feature", value = "42")
-    public void sampleFeatureRemaining() {
+    void sampleFeatureRemaining() {
         setSelected(42);
         do {
             config.setSelected(new Random().nextInt());
@@ -95,7 +95,7 @@ class CdiFeaturesIT {
 
     @RepeatedTest(3)
     @SetSystemProperty(key = "feature", value = "33")
-    public void genericSampleFeature2() {
+    void genericSampleFeature2() {
         setSelected(2);
         @SuppressWarnings("serial")
         Instance<GenericSampleFeature<String>> genericFeatureInstance = instance.select(new TypeLiteral<GenericSampleFeature<String>>() {});

@@ -40,8 +40,8 @@ class FeatureInstances<T> {
             if (selector == null) {
                 return null;
             }
-            if (selector instanceof Selector) {
-                return ((Selector) selector).selected();
+            if (selector instanceof Selector s) {
+                return s.selected();
             }
             return selector.selected(new Context() {
                 @Override

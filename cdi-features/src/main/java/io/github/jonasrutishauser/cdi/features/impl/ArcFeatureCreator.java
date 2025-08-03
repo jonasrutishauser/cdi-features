@@ -8,6 +8,10 @@ import jakarta.enterprise.util.TypeLiteral;
 
 public class ArcFeatureCreator {
 
+    private ArcFeatureCreator() {
+        // Utility class, no instantiation
+    }
+
     public static <T> T create(SyntheticCreationalContext<T> context, TypeLiteral<Instance<T>> instanceType,
             Bean<T> ownBean, Feature featureLiteral) {
         Instance<T> instance = context.getInjectedReference(instanceType, featureLiteral);
