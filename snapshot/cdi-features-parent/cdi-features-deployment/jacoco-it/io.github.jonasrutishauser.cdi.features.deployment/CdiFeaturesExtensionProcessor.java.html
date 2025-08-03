@@ -112,7 +112,7 @@ import jakarta.enterprise.util.TypeLiteral;
 <span class="fc" id="L112">        boolean configurationSelectorAdded = false;</span>
 <span class="fc bfc" id="L113" title="All 2 branches covered.">        for (BeanInfo featureBean : discoveryFinished.beanStream().assignableTo(beanType, featureAnnotation)</span>
 <span class="fc" id="L114">                .collect()) {</span>
-<span class="fc" id="L115">            AnnotationInstance feature = featureBean.getQualifier(DotName.createSimple(Feature.class)).get();</span>
+<span class="fc" id="L115">            AnnotationInstance feature = featureBean.getQualifier(DotName.createSimple(Feature.class)).orElseThrow();</span>
 <span class="fc" id="L116">            AnnotationValue selectorValue = feature.value(&quot;selector&quot;);</span>
 <span class="fc" id="L117">            AnnotationValue propertyKeyValue = feature.value(&quot;propertyKey&quot;);</span>
 <span class="pc bpc" id="L118" title="1 of 4 branches missed.">            if (selectorValue != null &amp;&amp; !selectorClass.equals(selectorValue.asClass())) {</span>
@@ -120,7 +120,7 @@ import jakarta.enterprise.util.TypeLiteral;
 <span class="fc" id="L120">                    configurator.addInjectionPoint(selectorValue.asClass());</span>
                 }
             } else
-<span class="pc bpc" id="L123" title="2 of 6 branches missed.">                if (!configurationSelectorAdded &amp;&amp; propertyKeyValue != null &amp;&amp; !propertyKeyValue.asString().isEmpty()) {</span>
+<span class="pc bpc" id="L123" title="1 of 6 branches missed.">                if (!configurationSelectorAdded &amp;&amp; propertyKeyValue != null &amp;&amp; !propertyKeyValue.asString().isEmpty()) {</span>
 <span class="fc" id="L124">                    configurator.addInjectionPoint(Type.create(</span>
 <span class="fc" id="L125">                            DotName.createSimple(&quot;io.github.jonasrutishauser.cdi.features.impl.ConfigurationSelector&quot;),</span>
                             Kind.CLASS));
