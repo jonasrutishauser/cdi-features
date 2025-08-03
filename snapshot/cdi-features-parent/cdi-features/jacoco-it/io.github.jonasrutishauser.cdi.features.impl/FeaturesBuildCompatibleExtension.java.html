@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FeaturesBuildCompatibleExtension.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cdi-features</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features.impl</a> &gt; <span class="el_source">FeaturesBuildCompatibleExtension.java</span></div><h1>FeaturesBuildCompatibleExtension.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features.impl;
+
+import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.isDefined;
+import static jakarta.interceptor.Interceptor.Priority.LIBRARY_AFTER;
+import static jakarta.interceptor.Interceptor.Priority.LIBRARY_BEFORE;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+
+import io.github.jonasrutishauser.cdi.features.ContextualSelector;
+import io.github.jonasrutishauser.cdi.features.Feature;
+import io.github.jonasrutishauser.cdi.features.Selector;
+import io.github.jonasrutishauser.cdi.features.ThrowableSelector;
+import jakarta.annotation.Priority;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Shutdown;
+import jakarta.enterprise.inject.Any;
+import jakarta.enterprise.inject.Default;
+import jakarta.enterprise.inject.Produces;
+import jakarta.enterprise.inject.build.compatible.spi.AnnotationBuilder;
+import jakarta.enterprise.inject.build.compatible.spi.BeanInfo;
+import jakarta.enterprise.inject.build.compatible.spi.BuildCompatibleExtension;
+import jakarta.enterprise.inject.build.compatible.spi.ClassConfig;
+import jakarta.enterprise.inject.build.compatible.spi.Discovery;
+import jakarta.enterprise.inject.build.compatible.spi.Enhancement;
+import jakarta.enterprise.inject.build.compatible.spi.FieldConfig;
+import jakarta.enterprise.inject.build.compatible.spi.Messages;
+import jakarta.enterprise.inject.build.compatible.spi.MetaAnnotations;
+import jakarta.enterprise.inject.build.compatible.spi.MethodConfig;
+import jakarta.enterprise.inject.build.compatible.spi.Parameters;
+import jakarta.enterprise.inject.build.compatible.spi.Registration;
+import jakarta.enterprise.inject.build.compatible.spi.ScannedClasses;
+import jakarta.enterprise.inject.build.compatible.spi.SkipIfPortableExtensionPresent;
+import jakarta.enterprise.inject.build.compatible.spi.Synthesis;
+import jakarta.enterprise.inject.build.compatible.spi.SyntheticBeanBuilder;
+import jakarta.enterprise.inject.build.compatible.spi.SyntheticComponents;
+import jakarta.enterprise.inject.build.compatible.spi.SyntheticObserver;
+import jakarta.enterprise.inject.build.compatible.spi.Types;
+import jakarta.enterprise.inject.spi.CDI;
+import jakarta.enterprise.inject.spi.EventContext;
+import jakarta.enterprise.lang.model.AnnotationInfo;
+import jakarta.enterprise.lang.model.declarations.ClassInfo;
+import jakarta.enterprise.lang.model.types.Type;
+
+@SkipIfPortableExtensionPresent(FeaturesExtension.class)
+<span class="fc" id="L51">public class FeaturesBuildCompatibleExtension implements BuildCompatibleExtension {</span>
+
+    private boolean quarkusDeployment;
+
+    private boolean mpConfigAvailable;
+
+<span class="fc" id="L57">    private long currentIdentifier = Long.MIN_VALUE;</span>
+
+<span class="fc" id="L59">    private final Set&lt;BeanInfo&gt; featureBeans = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L60">    private final Set&lt;Type&gt; typesWithDefaultScopedBeans = new HashSet&lt;&gt;();</span>
+
+    @Discovery
+    @Priority(LIBRARY_BEFORE + 500)
+    public void registerScope(MetaAnnotations metaAnnotations) {
+<span class="fc" id="L65">        metaAnnotations.addContext(FeatureScoped.class, true, FeatureContext.class);</span>
+<span class="fc" id="L66">    }</span>
+
+    @Discovery
+    public void registerTypes(ScannedClasses scannedClasses) {
+<span class="fc" id="L70">        scannedClasses.add(Cache.class.getName());</span>
+        try {
+<span class="fc" id="L72">            Class.forName(&quot;org.eclipse.microprofile.config.Config&quot;, false, getClass().getClassLoader());</span>
+<span class="fc" id="L73">            scannedClasses.add(ConfigurationSelector.class.getName());</span>
+<span class="fc" id="L74">            mpConfigAvailable = true;</span>
+<span class="fc" id="L75">        } catch (ClassNotFoundException e) {</span>
+            // ignore
+<span class="fc" id="L77">        }</span>
+<span class="fc" id="L78">    }</span>
+
+    @Priority(LIBRARY_BEFORE + 500)
+    @Enhancement(types = Cache.class)
+    public void setScopeOfCache(ClassConfig classConfig) {
+<span class="fc" id="L83">        classConfig.addAnnotation(ApplicationScoped.class);</span>
+<span class="fc" id="L84">    }</span>
+
+    @Priority(LIBRARY_AFTER + 900)
+    @Enhancement(types = Object.class, withSubtypes = true, withAnnotations = Feature.class)
+    public void addIdentifier(ClassConfig classConfig, Messages messages) {
+<span class="fc bfc" id="L89" title="All 2 branches covered.">        if (classConfig.info().hasAnnotation(Feature.class)) {</span>
+<span class="fc" id="L90">            classConfig.addAnnotation(AnnotationBuilder.of(Identified.class).value(currentIdentifier++).build());</span>
+<span class="fc" id="L91">            AnnotationInfo feature = classConfig.info().annotation(Feature.class);</span>
+<span class="fc bfc" id="L92" title="All 4 branches covered.">            if (cacheDurationMillisPropertyIsDefined(feature) &amp;&amp; !mpConfigAvailable) {</span>
+<span class="fc" id="L93">                messages.warn(&quot;as MicroProfile Config is not available, cache durationMillisProperty will be ignored&quot;,</span>
+<span class="fc" id="L94">                        classConfig.info());</span>
+<span class="fc" id="L95">                classConfig.removeAnnotation(a -&gt; Feature.class.getName().equals(a.name())) //</span>
+<span class="fc" id="L96">                        .addAnnotation(copyWithoutCacheDurationMillisProperty(feature));</span>
+            }
+        }
+<span class="fc bfc" id="L99" title="All 2 branches covered.">        for (MethodConfig method : classConfig.methods()) {</span>
+<span class="fc" id="L100">            AnnotationInfo feature = method.info().annotation(Feature.class);</span>
+<span class="pc bpc" id="L101" title="1 of 4 branches missed.">            if (method.info().hasAnnotation(Produces.class) &amp;&amp; feature != null) {</span>
+<span class="fc" id="L102">                method.addAnnotation(AnnotationBuilder.of(Identified.class).value(currentIdentifier++).build());</span>
+<span class="fc bfc" id="L103" title="All 4 branches covered.">                if (cacheDurationMillisPropertyIsDefined(feature) &amp;&amp; !mpConfigAvailable) {</span>
+<span class="fc" id="L104">                    messages.warn(</span>
+                            &quot;as MicroProfile Config is not available, cache durationMillisProperty will be ignored&quot;,
+<span class="fc" id="L106">                            method.info());</span>
+<span class="fc" id="L107">                    method.removeAnnotation(a -&gt; Feature.class.getName().equals(a.name())) //</span>
+<span class="fc" id="L108">                            .addAnnotation(copyWithoutCacheDurationMillisProperty(feature));</span>
+                }
+            }
+<span class="fc" id="L111">        }</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        for (FieldConfig field : classConfig.fields()) {</span>
+<span class="fc" id="L113">            AnnotationInfo feature = field.info().annotation(Feature.class);</span>
+<span class="pc bpc" id="L114" title="1 of 4 branches missed.">            if (field.info().hasAnnotation(Produces.class) &amp;&amp; feature != null) {</span>
+<span class="fc" id="L115">                field.addAnnotation(AnnotationBuilder.of(Identified.class).value(currentIdentifier++).build());</span>
+<span class="fc bfc" id="L116" title="All 4 branches covered.">                if (cacheDurationMillisPropertyIsDefined(feature) &amp;&amp; !mpConfigAvailable) {</span>
+<span class="fc" id="L117">                    messages.warn(</span>
+                            &quot;as MicroProfile Config is not available, cache durationMillisProperty will be ignored&quot;,
+<span class="fc" id="L119">                            field.info());</span>
+<span class="fc" id="L120">                    field.removeAnnotation(a -&gt; Feature.class.getName().equals(a.name())) //</span>
+<span class="fc" id="L121">                            .addAnnotation(copyWithoutCacheDurationMillisProperty(feature));</span>
+                }
+            }
+<span class="fc" id="L124">        }</span>
+<span class="fc" id="L125">    }</span>
+
+    private boolean cacheDurationMillisPropertyIsDefined(AnnotationInfo feature) {
+<span class="fc" id="L128">        return isDefined(feature.member(&quot;cache&quot;).asNestedAnnotation().member(&quot;durationMillisProperty&quot;).asString());</span>
+    }
+
+    private AnnotationInfo copyWithoutCacheDurationMillisProperty(AnnotationInfo feature) {
+<span class="fc" id="L132">        AnnotationBuilder builder = AnnotationBuilder.of(Feature.class);</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">        for (String member : Set.of(&quot;selector&quot;, &quot;propertyKey&quot;, &quot;propertyValue&quot;, &quot;remaining&quot;)) {</span>
+<span class="fc" id="L134">            builder = builder.member(member, feature.member(member));</span>
+<span class="fc" id="L135">        }</span>
+<span class="fc" id="L136">        AnnotationInfo cache = AnnotationBuilder.of(Feature.Cache.class)</span>
+<span class="fc" id="L137">                .member(&quot;durationMillis&quot;, feature.member(&quot;cache&quot;).asNestedAnnotation().member(&quot;durationMillis&quot;))</span>
+<span class="fc" id="L138">                .build();</span>
+<span class="fc" id="L139">        return builder.member(&quot;cache&quot;, cache).build();</span>
+    }
+
+    @Registration(types = Cache.class)
+    public void discoverQuarkusDeployment(BeanInfo bean) {
+<span class="fc bfc" id="L144" title="All 2 branches covered.">        if (bean.qualifiers().stream().anyMatch(a -&gt; Identified.class.getName().equals(a.name()))) {</span>
+<span class="fc" id="L145">            quarkusDeployment = true;</span>
+        }
+<span class="fc" id="L147">    }</span>
+
+    @Registration(types = Object.class)
+    public void discoverFeatures(BeanInfo bean, Types types, Messages messages) {
+<span class="fc bfc" id="L151" title="All 2 branches covered.">        if (bean.qualifiers().stream().anyMatch(a -&gt; Default.class.getName().equals(a.name()))) {</span>
+<span class="fc" id="L152">            typesWithDefaultScopedBeans.addAll(bean.types());</span>
+        }
+<span class="fc" id="L154">        Optional&lt;AnnotationInfo&gt; feature = bean.qualifiers().stream().filter(a -&gt; Feature.class.getName().equals(a.name())).findAny();</span>
+<span class="fc bfc" id="L155" title="All 2 branches covered.">        if (feature.isPresent()) {</span>
+<span class="fc" id="L156">            validate(feature.get(), bean, types, messages);</span>
+<span class="fc" id="L157">            featureBeans.add(bean);</span>
+        }
+<span class="fc" id="L159">    }</span>
+
+    private void validate(AnnotationInfo feature, BeanInfo bean, Types types, Messages messages) {
+<span class="fc bfc" id="L162" title="All 2 branches covered.">        if (feature.member(&quot;remaining&quot;).asBoolean()) {</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">            if (hasDefinedSelector(feature, types)) {</span>
+<span class="fc" id="L164">                messages.error(&quot;selector must not be set if remaining is true&quot;, bean);</span>
+            }
+<span class="fc bfc" id="L166" title="All 2 branches covered.">            if (isDefined(feature.member(&quot;propertyKey&quot;).asString())) {</span>
+<span class="fc" id="L167">                messages.error(&quot;propertyKey must not be set if remaining is true&quot;, bean);</span>
+            }
+<span class="fc bfc" id="L169" title="All 2 branches covered.">        } else if (hasDefinedSelector(feature, types)) {</span>
+<span class="fc bfc" id="L170" title="All 2 branches covered.">            if (isDefined(feature.member(&quot;propertyKey&quot;).asString())) {</span>
+<span class="fc" id="L171">                messages.error(&quot;propertyKey must not be set if selector is set&quot;, bean);</span>
+            }
+<span class="fc bfc" id="L173" title="All 4 branches covered.">        } else if (isDefined(feature.member(&quot;propertyKey&quot;).asString()) &amp;&amp; !mpConfigAvailable) {</span>
+<span class="fc" id="L174">            messages.error(&quot;as MicroProfile Config is not available, propertyKey must not be set&quot;, bean);</span>
+<span class="fc bfc" id="L175" title="All 2 branches covered.">        } else if (!isDefined(feature.member(&quot;propertyKey&quot;).asString())</span>
+<span class="fc bfc" id="L176" title="All 2 branches covered.">                &amp;&amp; !bean.types().contains(types.of(Selector.class))) {</span>
+<span class="fc" id="L177">                    messages.error(</span>
+<span class="fc" id="L178">                            &quot;bean must implement &quot; + Selector.class.getName() + &quot; if no other selector is defined&quot;,</span>
+                            bean);
+                }
+<span class="fc bfc" id="L181" title="All 2 branches covered.">        if (isDefined(feature.member(&quot;propertyValue&quot;).asString())</span>
+<span class="fc bfc" id="L182" title="All 2 branches covered.">                &amp;&amp; !isDefined(feature.member(&quot;propertyKey&quot;).asString())) {</span>
+<span class="fc" id="L183">            messages.warn(&quot;propertyValue must not be set if propertyKey is not set&quot;, bean);</span>
+        }
+<span class="fc" id="L185">    }</span>
+
+    private static boolean hasDefinedSelector(AnnotationInfo feature, Types types) {
+<span class="fc bfc" id="L188" title="All 2 branches covered.">        return !types.of(Selector.class).equals(feature.member(&quot;selector&quot;).asType());</span>
+    }
+
+    @Synthesis
+    @Priority(LIBRARY_AFTER + 500)
+    public void registerFeatureSelectorBeans(SyntheticComponents components, Types types) {
+<span class="fc bfc" id="L194" title="All 2 branches covered.">        for (Entry&lt;Type, Set&lt;BeanInfo&gt;&gt; feature : getFeatures(types).entrySet()) {</span>
+<span class="fc" id="L195">            AnnotationInfo identifier = AnnotationBuilder.of(Identified.class).value(currentIdentifier++).build();</span>
+            @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L197">            SyntheticBeanBuilder&lt;Object&gt; beanBuilder = (SyntheticBeanBuilder&lt;Object&gt;) components.addBean(toClass(feature.getKey()));</span>
+<span class="fc bfc" id="L198" title="All 2 branches covered.">            beanBuilder.qualifier(quarkusDeployment ? Any.class : Default.class) //</span>
+<span class="fc" id="L199">                    .qualifier(identifier) //</span>
+<span class="fc" id="L200">                    .type(feature.getKey()) //</span>
+<span class="fc" id="L201">                    .scope(FeatureScoped.class) //</span>
+<span class="fc" id="L202">                    .createWith(FeatureCreator.class) //</span>
+<span class="fc" id="L203">                    .withParam(FeatureCreator.IDENTIFIER, identifier) //</span>
+<span class="fc" id="L204">                    .withParam(FeatureCreator.BEANS_IDENTIFIER, getIdentifiers(feature.getValue()));</span>
+<span class="fc" id="L205">        }</span>
+<span class="fc" id="L206">    }</span>
+
+    private AnnotationInfo[] getIdentifiers(Set&lt;BeanInfo&gt; beans) {
+<span class="fc" id="L209">        return beans.stream() //</span>
+<span class="fc" id="L210">                .map(BeanInfo::qualifiers) //</span>
+<span class="fc" id="L211">                .map(this::getIdentifier) //</span>
+<span class="fc" id="L212">                .toArray(AnnotationInfo[]::new);</span>
+    }
+
+    private AnnotationInfo getIdentifier(Collection&lt;AnnotationInfo&gt; qualifiers) {
+<span class="fc" id="L216">        return qualifiers.stream().filter(a -&gt; Identified.class.getName().equals(a.name())).findAny().orElseThrow();</span>
+    }
+
+    private Map&lt;Type, Set&lt;BeanInfo&gt;&gt; getFeatures(Types types) {
+<span class="fc" id="L220">        Map&lt;Type, Set&lt;BeanInfo&gt;&gt; features = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L221">        Set&lt;Type&gt; excludedTypes = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L222">        excludedTypes.add(types.of(Object.class));</span>
+<span class="fc" id="L223">        excludedTypes.add(types.of(ContextualSelector.class));</span>
+<span class="fc" id="L224">        excludedTypes.add(types.of(Selector.class));</span>
+<span class="fc" id="L225">        excludedTypes.add(types.of(ThrowableSelector.class));</span>
+<span class="fc bfc" id="L226" title="All 2 branches covered.">        for (BeanInfo featureBean : featureBeans) {</span>
+<span class="fc bfc" id="L227" title="All 2 branches covered.">            for (Type type : featureBean.types()) {</span>
+<span class="pc bpc" id="L228" title="1 of 4 branches missed.">                if (!excludedTypes.contains(type) &amp;&amp; !typesWithDefaultScopedBeans.contains(type)) {</span>
+<span class="fc" id="L229">                    features.computeIfAbsent(type, t -&gt; new HashSet&lt;&gt;()).add(featureBean);</span>
+                }
+<span class="fc" id="L231">            }</span>
+<span class="fc" id="L232">        }</span>
+<span class="fc" id="L233">        return features;</span>
+    }
+
+    private Class&lt;?&gt; toClass(Type type) {
+        try {
+<span class="fc" id="L238">            return Class.forName(toClassInfo(type).name(), false, getClass().getClassLoader());</span>
+<span class="nc" id="L239">        } catch (ClassNotFoundException e) {</span>
+<span class="nc" id="L240">            throw new IllegalStateException(&quot;unsupported type &quot; + type, e);</span>
+        }
+    }
+
+    private ClassInfo toClassInfo(Type type) {
+<span class="fc bfc" id="L245" title="All 2 branches covered.">        if (type.isClass()) {</span>
+<span class="fc" id="L246">            return type.asClass().declaration();</span>
+        }
+<span class="pc bpc" id="L248" title="1 of 2 branches missed.">        if (type.isParameterizedType()) {</span>
+<span class="fc" id="L249">            return type.asParameterizedType().genericClass().declaration();</span>
+        }
+<span class="nc" id="L251">        throw new IllegalStateException(&quot;unsupported type &quot; + type);</span>
+    }
+
+    @Synthesis
+    @Priority(LIBRARY_BEFORE + 500)
+    public void registerScopeStop(SyntheticComponents components, Types types) {
+<span class="fc" id="L257">        components.addObserver(Shutdown.class) //</span>
+<span class="fc" id="L258">                .priority(LIBRARY_AFTER + 900) //</span>
+<span class="fc" id="L259">                .observeWith(ScopeStop.class);</span>
+<span class="fc" id="L260">    }</span>
+
+<span class="fc" id="L262">    public static class ScopeStop implements SyntheticObserver&lt;Shutdown&gt; {</span>
+        @Override
+        public void observe(EventContext&lt;Shutdown&gt; event, Parameters params) throws Exception {
+<span class="fc" id="L265">            ((FeatureContext) CDI.current().getBeanManager().getContext(FeatureScoped.class)).stop();</span>
+<span class="fc" id="L266">        }</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

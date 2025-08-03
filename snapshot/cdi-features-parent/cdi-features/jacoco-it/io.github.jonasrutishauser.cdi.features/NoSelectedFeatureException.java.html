@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NoSelectedFeatureException.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cdi-features</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features</a> &gt; <span class="el_source">NoSelectedFeatureException.java</span></div><h1>NoSelectedFeatureException.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features;
+
+import jakarta.enterprise.context.spi.Contextual;
+import jakarta.enterprise.inject.spi.BeanAttributes;
+
+public class NoSelectedFeatureException extends IllegalStateException {
+
+    private static final long serialVersionUID = 1L;
+
+    private final Contextual&lt;?&gt; contextual;
+
+    public NoSelectedFeatureException(Contextual&lt;?&gt; contextual) {
+<span class="nc" id="L13">        super(getMessage(contextual));</span>
+<span class="nc" id="L14">        this.contextual = contextual;</span>
+<span class="nc" id="L15">    }</span>
+
+    private static String getMessage(Contextual&lt;?&gt; contextual) {
+<span class="nc bnc" id="L18" title="All 2 branches missed.">        Object description = contextual instanceof BeanAttributes ? ((BeanAttributes&lt;?&gt;) contextual).getTypes()</span>
+<span class="nc" id="L19">                : contextual;</span>
+<span class="nc" id="L20">        return &quot;No selected feature for &quot; + description;</span>
+    }
+
+    public Contextual&lt;?&gt; getContextual() {
+<span class="nc" id="L24">        return contextual;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

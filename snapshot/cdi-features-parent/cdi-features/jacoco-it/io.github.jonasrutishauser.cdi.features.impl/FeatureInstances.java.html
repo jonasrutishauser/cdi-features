@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FeatureInstances.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">cdi-features</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features.impl</a> &gt; <span class="el_source">FeatureInstances.java</span></div><h1>FeatureInstances.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features.impl;
+
+import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.feature;
+import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.isDefined;
+
+import java.lang.reflect.Type;
+import java.util.Map;
+import java.util.OptionalLong;
+
+import org.eclipse.microprofile.config.ConfigProvider;
+
+import io.github.jonasrutishauser.cdi.features.ContextualSelector;
+import io.github.jonasrutishauser.cdi.features.ContextualSelector.Context;
+import io.github.jonasrutishauser.cdi.features.Feature;
+import io.github.jonasrutishauser.cdi.features.Selector;
+import jakarta.enterprise.context.spi.Contextual;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.enterprise.inject.spi.BeanAttributes;
+
+class FeatureInstances&lt;T&gt; {
+    private final Map&lt;Bean&lt;? extends T&gt;, T&gt; instances;
+    private final Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&gt; selectors;
+    private final Cache cache;
+
+    public FeatureInstances(Map&lt;Bean&lt;? extends T&gt;, T&gt; instances, Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&gt; selectors,
+<span class="fc" id="L26">            Cache cache) {</span>
+<span class="fc" id="L27">        this.instances = instances;</span>
+<span class="fc" id="L28">        this.selectors = selectors;</span>
+<span class="fc" id="L29">        this.cache = cache;</span>
+<span class="fc" id="L30">    }</span>
+
+    public T selected(Contextual&lt;T&gt; contextual) {
+<span class="fc" id="L33">        return instances.get(cache.compute(contextual, selectors.keySet(), this::isSelected,</span>
+<span class="fc" id="L34">                bean -&gt; cacheDurationInMillis(contextual, bean)));</span>
+    }
+
+    private Boolean isSelected(Bean&lt;?&gt; bean) {
+<span class="fc" id="L38">        ContextualSelector selector = selectors.get(bean);</span>
+        try {
+<span class="fc bfc" id="L40" title="All 2 branches covered.">            if (selector == null) {</span>
+<span class="fc" id="L41">                return null;</span>
+            }
+<span class="fc bfc" id="L43" title="All 2 branches covered.">            if (selector instanceof Selector) {</span>
+<span class="fc" id="L44">                return ((Selector) selector).selected();</span>
+            }
+<span class="fc" id="L46">            return selector.selected(new Context() {</span>
+                @Override
+                public Bean&lt;?&gt; bean() {
+<span class="fc" id="L49">                    return bean;</span>
+                }
+
+                @Override
+                public Object instance() {
+<span class="fc" id="L54">                    return instances.get(bean);</span>
+                }
+            });
+<span class="fc" id="L57">        } catch (RuntimeException e) {</span>
+<span class="fc" id="L58">            return false;</span>
+        }
+    }
+
+    private long cacheDurationInMillis(Contextual&lt;?&gt; contextual, Bean&lt;?&gt; bean) {
+<span class="fc" id="L63">        Feature feature = feature(bean).orElseThrow();</span>
+<span class="fc" id="L64">        long durationMillis = feature.cache().durationMillis();</span>
+<span class="fc" id="L65">        String property = feature.cache().durationMillisProperty();</span>
+<span class="fc" id="L66">        OptionalLong propertyValue = OptionalLong.empty();</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (isDefined(property)) {</span>
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">            if (property.contains(&quot;${type}&quot;)) {</span>
+<span class="fc" id="L69">                String type = &quot;&lt;undefined&gt;&quot;;</span>
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">                if (contextual instanceof BeanAttributes) {</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">                    type = ((BeanAttributes&lt;?&gt;) contextual).getTypes().stream().filter(t -&gt; !Object.class.equals(t))</span>
+<span class="fc" id="L72">                            .findAny().map(Type::getTypeName).orElse(type);</span>
+                }
+<span class="fc" id="L74">                property = property.replace(&quot;${type}&quot;, type);</span>
+            }
+<span class="fc" id="L76">            propertyValue = ProperyResolver.lookup(property);</span>
+        }
+<span class="fc" id="L78">        return propertyValue.orElse(durationMillis);</span>
+    }
+
+    private static class ProperyResolver {
+        public static OptionalLong lookup(String property) {
+<span class="fc" id="L83">            return ConfigProvider.getConfig().getOptionalValue(property, Long.class).map(OptionalLong::of)</span>
+<span class="fc" id="L84">                    .orElse(OptionalLong.empty());</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
