@@ -1,5 +1,8 @@
 package io.github.jonasrutishauser.cdi.features.deployment;
 
+import static io.github.jonasrutishauser.cdi.features.impl.ArcFeatureCreator.CACHE_CLASS;
+import static io.github.jonasrutishauser.cdi.features.impl.ArcFeatureCreator.CONFIGURATION_SELECTOR_CLASS;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -42,7 +45,6 @@ import jakarta.enterprise.util.TypeLiteral;
 
 public class CdiFeaturesExtensionProcessor {
 
-    private static final String CACHE_CLASS = "io.github.jonasrutishauser.cdi.features.impl.Cache";
     private static final String FEATURE = "cdi-features";
 
     @BuildStep
@@ -121,9 +123,8 @@ public class CdiFeaturesExtensionProcessor {
                 }
             } else
                 if (!configurationSelectorAdded && propertyKeyValue != null && !propertyKeyValue.asString().isEmpty()) {
-                    configurator.addInjectionPoint(Type.create(
-                            DotName.createSimple("io.github.jonasrutishauser.cdi.features.impl.ConfigurationSelector"),
-                            Kind.CLASS));
+                    configurator.addInjectionPoint(
+                            Type.create(DotName.createSimple(CONFIGURATION_SELECTOR_CLASS), Kind.CLASS));
                     configurationSelectorAdded = true;
                 }
         }

@@ -8,6 +8,9 @@ import jakarta.enterprise.util.TypeLiteral;
 
 public class ArcFeatureCreator {
 
+    public static final String CACHE_CLASS = Cache.class.getName();
+    public static final String CONFIGURATION_SELECTOR_CLASS = ConfigurationSelector.class.getName();
+
     private ArcFeatureCreator() {
         // Utility class, no instantiation
     }
