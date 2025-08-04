@@ -26,6 +26,7 @@ import jakarta.enterprise.inject.build.compatible.spi.AnnotationBuilder;
 import jakarta.enterprise.inject.build.compatible.spi.BeanInfo;
 import jakarta.enterprise.inject.build.compatible.spi.BuildCompatibleExtension;
 import jakarta.enterprise.inject.build.compatible.spi.ClassConfig;
+import jakarta.enterprise.inject.build.compatible.spi.DeclarationConfig;
 import jakarta.enterprise.inject.build.compatible.spi.Discovery;
 import jakarta.enterprise.inject.build.compatible.spi.Enhancement;
 import jakarta.enterprise.inject.build.compatible.spi.FieldConfig;
@@ -49,6 +50,8 @@ import jakarta.enterprise.lang.model.types.Type;
 
 @SkipIfPortableExtensionPresent(FeaturesExtension.class)
 public class FeaturesBuildCompatibleExtension implements BuildCompatibleExtension {
+
+    private static final String FEATURE_PROPERTY_KEY_MEMBER = "propertyKey";
 
     private boolean quarkusDeployment;
 
@@ -85,41 +88,26 @@ public class FeaturesBuildCompatibleExtension implements BuildCompatibleExtensio
 
     @Priority(LIBRARY_AFTER + 900)
     @Enhancement(types = Object.class, withSubtypes = true, withAnnotations = Feature.class)
-    public void addIdentifier(ClassConfig classConfig, Messages messages) {
-        if (classConfig.info().hasAnnotation(Feature.class)) {
-            classConfig.addAnnotation(AnnotationBuilder.of(Identified.class).value(currentIdentifier++).build());
-            AnnotationInfo feature = classConfig.info().annotation(Feature.class);
-            if (cacheDurationMillisPropertyIsDefined(feature) && !mpConfigAvailable) {
-                messages.warn("as MicroProfile Config is not available, cache durationMillisProperty will be ignored",
-                        classConfig.info());
-                classConfig.removeAnnotation(a -> Feature.class.getName().equals(a.name())) //
-                        .addAnnotation(copyWithoutCacheDurationMillisProperty(feature));
-            }
-        }
+    public void addIdentifierAndCleanupCacheDurationProperty(ClassConfig classConfig, Messages messages) {
+        addIdentifierAndCleanupCacheDurationProperty(classConfig, false, messages);
         for (MethodConfig method : classConfig.methods()) {
-            AnnotationInfo feature = method.info().annotation(Feature.class);
-            if (method.info().hasAnnotation(Produces.class) && feature != null) {
-                method.addAnnotation(AnnotationBuilder.of(Identified.class).value(currentIdentifier++).build());
-                if (cacheDurationMillisPropertyIsDefined(feature) && !mpConfigAvailable) {
-                    messages.warn(
-                            "as MicroProfile Config is not available, cache durationMillisProperty will be ignored",
-                            method.info());
-                    method.removeAnnotation(a -> Feature.class.getName().equals(a.name())) //
-                            .addAnnotation(copyWithoutCacheDurationMillisProperty(feature));
-                }
-            }
+            addIdentifierAndCleanupCacheDurationProperty(method, true, messages);
         }
         for (FieldConfig field : classConfig.fields()) {
-            AnnotationInfo feature = field.info().annotation(Feature.class);
-            if (field.info().hasAnnotation(Produces.class) && feature != null) {
-                field.addAnnotation(AnnotationBuilder.of(Identified.class).value(currentIdentifier++).build());
-                if (cacheDurationMillisPropertyIsDefined(feature) && !mpConfigAvailable) {
-                    messages.warn(
-                            "as MicroProfile Config is not available, cache durationMillisProperty will be ignored",
-                            field.info());
-                    field.removeAnnotation(a -> Feature.class.getName().equals(a.name())) //
-                            .addAnnotation(copyWithoutCacheDurationMillisProperty(feature));
-                }
+            addIdentifierAndCleanupCacheDurationProperty(field, true, messages);
+        }
+    }
+
+    private void addIdentifierAndCleanupCacheDurationProperty(DeclarationConfig declaration, boolean needsProduces,
+            Messages messages) {
+        AnnotationInfo feature = declaration.info().annotation(Feature.class);
+        if (feature != null && (!needsProduces || declaration.info().hasAnnotation(Produces.class))) {
+            declaration.addAnnotation(AnnotationBuilder.of(Identified.class).value(currentIdentifier++).build());
+            if (!mpConfigAvailable && cacheDurationMillisPropertyIsDefined(feature)) {
+                messages.warn("as MicroProfile Config is not available, cache durationMillisProperty will be ignored",
+                        declaration.info());
+                declaration.removeAnnotation(a -> Feature.class.getName().equals(a.name())) //
+                        .addAnnotation(copyFeatureWithoutCacheDurationMillisProperty(feature));
             }
         }
     }
@@ -128,15 +116,26 @@ public class FeaturesBuildCompatibleExtension implements BuildCompatibleExtensio
         return isDefined(feature.member("cache").asNestedAnnotation().member("durationMillisProperty").asString());
     }
 
-    private AnnotationInfo copyWithoutCacheDurationMillisProperty(AnnotationInfo feature) {
+    private AnnotationInfo copyFeatureWithoutCacheDurationMillisProperty(AnnotationInfo feature) {
         AnnotationBuilder builder = AnnotationBuilder.of(Feature.class);
-        for (String member : Set.of("selector", "propertyKey", "propertyValue", "remaining")) {
-            builder = builder.member(member, feature.member(member));
-        }
-        AnnotationInfo cache = AnnotationBuilder.of(Feature.Cache.class)
-                .member("durationMillis", feature.member("cache").asNestedAnnotation().member("durationMillis"))
-                .build();
-        return builder.member("cache", cache).build();
+        feature.members().forEach((key, value) -> {
+            if (key.equals("cache")) {
+                builder.member(key, copyCacheWithoutDurationMillisProperty(value.asNestedAnnotation()));
+            } else {
+                builder.member(key, value);
+            }
+        });
+        return builder.build();
+    }
+
+    private AnnotationInfo copyCacheWithoutDurationMillisProperty(AnnotationInfo cache) {
+        AnnotationBuilder builder = AnnotationBuilder.of(Feature.Cache.class);
+        cache.members().forEach((key, value) -> {
+            if (!key.equals("durationMillisProperty")) {
+                builder.member(key, value);
+            }
+        });
+        return builder.build();
     }
 
     @Registration(types = Cache.class)
@@ -163,24 +162,26 @@ public class FeaturesBuildCompatibleExtension implements BuildCompatibleExtensio
             if (hasDefinedSelector(feature, types)) {
                 messages.error("selector must not be set if remaining is true", bean);
             }
-            if (isDefined(feature.member("propertyKey").asString())) {
-                messages.error("propertyKey must not be set if remaining is true", bean);
+            if (isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString())) {
+                messages.error(FEATURE_PROPERTY_KEY_MEMBER + " must not be set if remaining is true", bean);
             }
         } else if (hasDefinedSelector(feature, types)) {
-            if (isDefined(feature.member("propertyKey").asString())) {
-                messages.error("propertyKey must not be set if selector is set", bean);
+            if (isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString())) {
+                messages.error(FEATURE_PROPERTY_KEY_MEMBER + " must not be set if selector is set", bean);
             }
-        } else if (isDefined(feature.member("propertyKey").asString()) && !mpConfigAvailable) {
-            messages.error("as MicroProfile Config is not available, propertyKey must not be set", bean);
-        } else if (!isDefined(feature.member("propertyKey").asString())
+        } else if (isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString()) && !mpConfigAvailable) {
+            messages.error(
+                    "as MicroProfile Config is not available, " + FEATURE_PROPERTY_KEY_MEMBER + " must not be set",
+                    bean);
+        } else if (!isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString())
                 && !bean.types().contains(types.of(Selector.class))) {
                     messages.error(
                             "bean must implement " + Selector.class.getName() + " if no other selector is defined",
                             bean);
                 }
         if (isDefined(feature.member("propertyValue").asString())
-                && !isDefined(feature.member("propertyKey").asString())) {
-            messages.warn("propertyValue must not be set if propertyKey is not set", bean);
+                && !isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString())) {
+            messages.warn("propertyValue must not be set if " + FEATURE_PROPERTY_KEY_MEMBER + " is not set", bean);
         }
     }
 

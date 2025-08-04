@@ -91,7 +91,12 @@ public class FeaturesExtension implements Extension {
             definitionError.accept(new IllegalStateException(
                     "propertyValue must not be set if propertyKey is not set on bean " + bean));
         }
-        if (isDefined(feature.cache().durationMillisProperty()) && !mpConfigAvailable) {
+        validateCacheDurationMillisProperty(feature, bean, definitionError);
+    }
+
+    private void validateCacheDurationMillisProperty(Feature feature, Bean<?> bean,
+            Consumer<Throwable> definitionError) {
+        if (!mpConfigAvailable && isDefined(feature.cache().durationMillisProperty())) {
             definitionError.accept(new IllegalStateException(
                     "as MicroProfile Config is not available, cache durationMillisProperty must not be set on bean "
                             + bean));
