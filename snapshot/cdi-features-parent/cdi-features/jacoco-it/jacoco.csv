@@ -5,7 +5,7 @@ cdi-features,io.github.jonasrutishauser.cdi.features,ThrowableSelector,4,7,0,0,2
 cdi-features,io.github.jonasrutishauser.cdi.features.impl,FeatureInstances,0,126,2,10,0,28,2,10,0,6
 cdi-features,io.github.jonasrutishauser.cdi.features.impl,FeaturesBuildCompatibleExtension,16,650,4,70,3,121,4,60,0,27
 cdi-features,io.github.jonasrutishauser.cdi.features.impl,Cache,5,118,2,18,1,24,2,12,0,4
-cdi-features,io.github.jonasrutishauser.cdi.features.impl,FeaturesExtension,25,531,5,57,6,97,4,49,0,22
+cdi-features,io.github.jonasrutishauser.cdi.features.impl,FeaturesExtension,17,539,3,59,4,99,3,50,0,22
 cdi-features,io.github.jonasrutishauser.cdi.features.impl,FeatureCreator.new FeatureCreator.Lookup() {...},0,29,0,2,0,5,0,3,0,2
 cdi-features,io.github.jonasrutishauser.cdi.features.impl,FeatureCreator,0,163,0,8,0,30,0,9,0,5
 cdi-features,io.github.jonasrutishauser.cdi.features.impl,Cache.CacheEntry,0,14,0,0,0,5,0,1,0,1
