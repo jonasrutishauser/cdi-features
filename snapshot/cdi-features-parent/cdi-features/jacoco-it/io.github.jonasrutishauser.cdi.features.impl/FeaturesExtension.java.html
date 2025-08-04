@@ -100,8 +100,8 @@ import jakarta.enterprise.inject.spi.ProcessBean;
 <span class="fc bfc" id="L100" title="All 2 branches covered.">        if (type instanceof Class) {</span>
 <span class="fc" id="L101">            return (Class&lt;?&gt;) type;</span>
         }
-<span class="pc bpc" id="L103" title="1 of 2 branches missed.">        if (type instanceof ParameterizedType) {</span>
-<span class="fc" id="L104">            return toClass(((ParameterizedType) type).getRawType());</span>
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">        if (type instanceof ParameterizedType parameterizedType) {</span>
+<span class="fc" id="L104">            return toClass(parameterizedType.getRawType());</span>
         }
 <span class="nc" id="L106">        throw new IllegalStateException(&quot;unsupported type &quot; + type);</span>
     }

@@ -13,6 +13,7 @@ import io.github.jonasrutishauser.cdi.features.ContextualSelector;
 import io.github.jonasrutishauser.cdi.features.ContextualSelector.Context;
 import io.github.jonasrutishauser.cdi.features.Feature;
 import io.github.jonasrutishauser.cdi.features.Selector;
+import io.github.jonasrutishauser.cdi.features.impl.Cache.Selection;
 import jakarta.enterprise.context.spi.Contextual;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanAttributes;
@@ -23,65 +24,65 @@ class FeatureInstances&lt;T&gt; {
     private final Cache cache;
 
     public FeatureInstances(Map&lt;Bean&lt;? extends T&gt;, T&gt; instances, Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&gt; selectors,
-<span class="fc" id="L26">            Cache cache) {</span>
-<span class="fc" id="L27">        this.instances = instances;</span>
-<span class="fc" id="L28">        this.selectors = selectors;</span>
-<span class="fc" id="L29">        this.cache = cache;</span>
-<span class="fc" id="L30">    }</span>
+<span class="fc" id="L27">            Cache cache) {</span>
+<span class="fc" id="L28">        this.instances = instances;</span>
+<span class="fc" id="L29">        this.selectors = selectors;</span>
+<span class="fc" id="L30">        this.cache = cache;</span>
+<span class="fc" id="L31">    }</span>
 
     public T selected(Contextual&lt;T&gt; contextual) {
-<span class="fc" id="L33">        return instances.get(cache.compute(contextual, selectors.keySet(), this::isSelected,</span>
-<span class="fc" id="L34">                bean -&gt; cacheDurationInMillis(contextual, bean)));</span>
+<span class="fc" id="L34">        return instances.get(cache.compute(contextual, selectors.keySet(), this::isSelected,</span>
+<span class="fc" id="L35">                bean -&gt; cacheDurationInMillis(contextual, bean)));</span>
     }
 
-    private Boolean isSelected(Bean&lt;?&gt; bean) {
-<span class="fc" id="L38">        ContextualSelector selector = selectors.get(bean);</span>
+    private Selection isSelected(Bean&lt;?&gt; bean) {
+<span class="fc" id="L39">        ContextualSelector selector = selectors.get(bean);</span>
         try {
-<span class="fc bfc" id="L40" title="All 2 branches covered.">            if (selector == null) {</span>
-<span class="fc" id="L41">                return null;</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">            if (selector == null) {</span>
+<span class="fc" id="L42">                return Selection.REMAINING;</span>
             }
-<span class="fc bfc" id="L43" title="All 2 branches covered.">            if (selector instanceof Selector s) {</span>
-<span class="fc" id="L44">                return s.selected();</span>
+<span class="fc bfc" id="L44" title="All 2 branches covered.">            if (selector instanceof Selector s) {</span>
+<span class="fc" id="L45">                return Selection.of(s.selected());</span>
             }
-<span class="fc" id="L46">            return selector.selected(new Context() {</span>
+<span class="fc" id="L47">            return Selection.of(selector.selected(new Context() {</span>
                 @Override
                 public Bean&lt;?&gt; bean() {
-<span class="fc" id="L49">                    return bean;</span>
+<span class="fc" id="L50">                    return bean;</span>
                 }
 
                 @Override
                 public Object instance() {
-<span class="fc" id="L54">                    return instances.get(bean);</span>
+<span class="fc" id="L55">                    return instances.get(bean);</span>
                 }
-            });
-<span class="fc" id="L57">        } catch (RuntimeException e) {</span>
-<span class="fc" id="L58">            return false;</span>
+            }));
+<span class="fc" id="L58">        } catch (RuntimeException e) {</span>
+<span class="fc" id="L59">            return Selection.NOT_SELECTED;</span>
         }
     }
 
     private long cacheDurationInMillis(Contextual&lt;?&gt; contextual, Bean&lt;?&gt; bean) {
-<span class="fc" id="L63">        Feature feature = feature(bean).orElseThrow();</span>
-<span class="fc" id="L64">        long durationMillis = feature.cache().durationMillis();</span>
-<span class="fc" id="L65">        String property = feature.cache().durationMillisProperty();</span>
-<span class="fc" id="L66">        OptionalLong propertyValue = OptionalLong.empty();</span>
-<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (isDefined(property)) {</span>
-<span class="pc bpc" id="L68" title="1 of 2 branches missed.">            if (property.contains(&quot;${type}&quot;)) {</span>
-<span class="fc" id="L69">                String type = &quot;&lt;undefined&gt;&quot;;</span>
-<span class="pc bpc" id="L70" title="1 of 2 branches missed.">                if (contextual instanceof BeanAttributes) {</span>
-<span class="fc bfc" id="L71" title="All 2 branches covered.">                    type = ((BeanAttributes&lt;?&gt;) contextual).getTypes().stream().filter(t -&gt; !Object.class.equals(t))</span>
-<span class="fc" id="L72">                            .findAny().map(Type::getTypeName).orElse(type);</span>
+<span class="fc" id="L64">        Feature feature = feature(bean).orElseThrow();</span>
+<span class="fc" id="L65">        long durationMillis = feature.cache().durationMillis();</span>
+<span class="fc" id="L66">        String property = feature.cache().durationMillisProperty();</span>
+<span class="fc" id="L67">        OptionalLong propertyValue = OptionalLong.empty();</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        if (isDefined(property)) {</span>
+<span class="pc bpc" id="L69" title="1 of 2 branches missed.">            if (property.contains(&quot;${type}&quot;)) {</span>
+<span class="fc" id="L70">                String type = &quot;&lt;undefined&gt;&quot;;</span>
+<span class="pc bpc" id="L71" title="1 of 2 branches missed.">                if (contextual instanceof BeanAttributes) {</span>
+<span class="fc bfc" id="L72" title="All 2 branches covered.">                    type = ((BeanAttributes&lt;?&gt;) contextual).getTypes().stream().filter(t -&gt; !Object.class.equals(t))</span>
+<span class="fc" id="L73">                            .findAny().map(Type::getTypeName).orElse(type);</span>
                 }
-<span class="fc" id="L74">                property = property.replace(&quot;${type}&quot;, type);</span>
+<span class="fc" id="L75">                property = property.replace(&quot;${type}&quot;, type);</span>
             }
-<span class="fc" id="L76">            propertyValue = ProperyResolver.lookup(property);</span>
+<span class="fc" id="L77">            propertyValue = ProperyResolver.lookup(property);</span>
         }
-<span class="fc" id="L78">        return propertyValue.orElse(durationMillis);</span>
+<span class="fc" id="L79">        return propertyValue.orElse(durationMillis);</span>
     }
 
     private static class ProperyResolver {
         public static OptionalLong lookup(String property) {
-<span class="fc" id="L83">            return ConfigProvider.getConfig().getOptionalValue(property, Long.class).map(OptionalLong::of)</span>
-<span class="fc" id="L84">                    .orElse(OptionalLong.empty());</span>
+<span class="fc" id="L84">            return ConfigProvider.getConfig().getOptionalValue(property, Long.class).map(OptionalLong::of)</span>
+<span class="fc" id="L85">                    .orElse(OptionalLong.empty());</span>
         }
     }
 }

@@ -22,57 +22,65 @@
 <a class="jxr_linenumber" name="L14" href="#L14">14</a>  
 <a class="jxr_linenumber" name="L15" href="#L15">15</a>  <strong class="jxr_keyword">class</strong> <a name="Cache" href="../../../../../../io/github/jonasrutishauser/cdi/features/impl/Cache.html#Cache">Cache</a> {
 <a class="jxr_linenumber" name="L16" href="#L16">16</a>  
-<a class="jxr_linenumber" name="L17" href="#L17">17</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> ConcurrentMap&lt;Contextual&lt;?&gt;, CacheEntry&gt; cache = <strong class="jxr_keyword">new</strong> ConcurrentHashMap&lt;&gt;();
-<a class="jxr_linenumber" name="L18" href="#L18">18</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> Clock clock = Clock.systemUTC();
+<a class="jxr_linenumber" name="L17" href="#L17">17</a>      <strong class="jxr_keyword">public</strong> enum Selection {
+<a class="jxr_linenumber" name="L18" href="#L18">18</a>          SELECTED, NOT_SELECTED, REMAINING;
 <a class="jxr_linenumber" name="L19" href="#L19">19</a>  
-<a class="jxr_linenumber" name="L20" href="#L20">20</a>      <strong class="jxr_keyword">public</strong> &lt;T&gt; Bean&lt;?&gt; compute(Contextual&lt;T&gt; key, Collection&lt;Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt;&gt; items,
-<a class="jxr_linenumber" name="L21" href="#L21">21</a>              Function&lt;Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt;, Boolean&gt; selection, ToLongFunction&lt;Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt;&gt; cacheDurationInMillis) {
-<a class="jxr_linenumber" name="L22" href="#L22">22</a>          CacheEntry entry = cache.compute(key, (k, current) -&gt; {
-<a class="jxr_linenumber" name="L23" href="#L23">23</a>              <strong class="jxr_keyword">if</strong> (current != <strong class="jxr_keyword">null</strong> &amp;&amp; (current.forever || !current.validUntil.isBefore(Instant.now(clock)))) {
-<a class="jxr_linenumber" name="L24" href="#L24">24</a>                  <strong class="jxr_keyword">return</strong> current;
-<a class="jxr_linenumber" name="L25" href="#L25">25</a>              }
-<a class="jxr_linenumber" name="L26" href="#L26">26</a>              Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt; remaining = <strong class="jxr_keyword">null</strong>;
-<a class="jxr_linenumber" name="L27" href="#L27">27</a>              <strong class="jxr_keyword">for</strong> (Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt; item : items) {
-<a class="jxr_linenumber" name="L28" href="#L28">28</a>                  Boolean selected = selection.apply(item);
-<a class="jxr_linenumber" name="L29" href="#L29">29</a>                  <strong class="jxr_keyword">if</strong> (selected == <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L30" href="#L30">30</a>                      remaining = item;
-<a class="jxr_linenumber" name="L31" href="#L31">31</a>                  } <strong class="jxr_keyword">else</strong> <strong class="jxr_keyword">if</strong> (selected.booleanValue()) {
-<a class="jxr_linenumber" name="L32" href="#L32">32</a>                      <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> CacheEntry(item, validUntil(cacheDurationInMillis.applyAsLong(item)));
-<a class="jxr_linenumber" name="L33" href="#L33">33</a>                  }
-<a class="jxr_linenumber" name="L34" href="#L34">34</a>              }
-<a class="jxr_linenumber" name="L35" href="#L35">35</a>              <strong class="jxr_keyword">if</strong> (remaining == <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L36" href="#L36">36</a>                  <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a name="NoSelectedFeatureException" href="../../../../../../io/github/jonasrutishauser/cdi/features/NoSelectedFeatureException.html#NoSelectedFeatureException">NoSelectedFeatureException</a>(k);
-<a class="jxr_linenumber" name="L37" href="#L37">37</a>              }
-<a class="jxr_linenumber" name="L38" href="#L38">38</a>              <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> CacheEntry(remaining, validUntil(cacheDurationInMillis.applyAsLong(remaining)));
-<a class="jxr_linenumber" name="L39" href="#L39">39</a>          });
-<a class="jxr_linenumber" name="L40" href="#L40">40</a>          <strong class="jxr_keyword">if</strong> (entry.validUntil.isBefore(Instant.now(clock))) {
-<a class="jxr_linenumber" name="L41" href="#L41">41</a>              cache.remove(key, entry);
-<a class="jxr_linenumber" name="L42" href="#L42">42</a>          }
-<a class="jxr_linenumber" name="L43" href="#L43">43</a>          <strong class="jxr_keyword">return</strong> entry.target;
-<a class="jxr_linenumber" name="L44" href="#L44">44</a>      }
-<a class="jxr_linenumber" name="L45" href="#L45">45</a>  
-<a class="jxr_linenumber" name="L46" href="#L46">46</a>      <strong class="jxr_keyword">private</strong> Instant validUntil(<strong class="jxr_keyword">long</strong> durationInMillis) {
-<a class="jxr_linenumber" name="L47" href="#L47">47</a>          <strong class="jxr_keyword">if</strong> (durationInMillis &lt; 0) {
-<a class="jxr_linenumber" name="L48" href="#L48">48</a>              <strong class="jxr_keyword">return</strong> Instant.MAX;
-<a class="jxr_linenumber" name="L49" href="#L49">49</a>          } <strong class="jxr_keyword">else</strong> <strong class="jxr_keyword">if</strong> (durationInMillis == 0) {
-<a class="jxr_linenumber" name="L50" href="#L50">50</a>              <strong class="jxr_keyword">return</strong> Instant.MIN;
-<a class="jxr_linenumber" name="L51" href="#L51">51</a>          }
-<a class="jxr_linenumber" name="L52" href="#L52">52</a>          <strong class="jxr_keyword">return</strong> Instant.now(clock).plusMillis(durationInMillis);
-<a class="jxr_linenumber" name="L53" href="#L53">53</a>      }
-<a class="jxr_linenumber" name="L54" href="#L54">54</a>  
-<a class="jxr_linenumber" name="L55" href="#L55">55</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> CacheEntry {
-<a class="jxr_linenumber" name="L56" href="#L56">56</a>          <strong class="jxr_keyword">final</strong> Bean&lt;?&gt; target;
-<a class="jxr_linenumber" name="L57" href="#L57">57</a>          <strong class="jxr_keyword">final</strong> Instant validUntil;
-<a class="jxr_linenumber" name="L58" href="#L58">58</a>          <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> forever;
-<a class="jxr_linenumber" name="L59" href="#L59">59</a>  
-<a class="jxr_linenumber" name="L60" href="#L60">60</a>          <strong class="jxr_keyword">public</strong> CacheEntry(Bean&lt;?&gt; target, Instant validUntil) {
-<a class="jxr_linenumber" name="L61" href="#L61">61</a>              <strong class="jxr_keyword">this</strong>.target = target;
-<a class="jxr_linenumber" name="L62" href="#L62">62</a>              <strong class="jxr_keyword">this</strong>.validUntil = validUntil;
-<a class="jxr_linenumber" name="L63" href="#L63">63</a>              <strong class="jxr_keyword">this</strong>.forever = validUntil.equals(Instant.MAX);
-<a class="jxr_linenumber" name="L64" href="#L64">64</a>          }
-<a class="jxr_linenumber" name="L65" href="#L65">65</a>      }
-<a class="jxr_linenumber" name="L66" href="#L66">66</a>  
-<a class="jxr_linenumber" name="L67" href="#L67">67</a>  }
+<a class="jxr_linenumber" name="L20" href="#L20">20</a>          <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> Selection of(<strong class="jxr_keyword">boolean</strong> selected) {
+<a class="jxr_linenumber" name="L21" href="#L21">21</a>              <strong class="jxr_keyword">return</strong> selected ? SELECTED : NOT_SELECTED;
+<a class="jxr_linenumber" name="L22" href="#L22">22</a>          }
+<a class="jxr_linenumber" name="L23" href="#L23">23</a>      }
+<a class="jxr_linenumber" name="L24" href="#L24">24</a>  
+<a class="jxr_linenumber" name="L25" href="#L25">25</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> ConcurrentMap&lt;Contextual&lt;?&gt;, CacheEntry&gt; entries = <strong class="jxr_keyword">new</strong> ConcurrentHashMap&lt;&gt;();
+<a class="jxr_linenumber" name="L26" href="#L26">26</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> Clock clock = Clock.systemUTC();
+<a class="jxr_linenumber" name="L27" href="#L27">27</a>  
+<a class="jxr_linenumber" name="L28" href="#L28">28</a>      <strong class="jxr_keyword">public</strong> &lt;T&gt; Bean&lt;?&gt; compute(Contextual&lt;T&gt; key, Collection&lt;Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt;&gt; items,
+<a class="jxr_linenumber" name="L29" href="#L29">29</a>              Function&lt;Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt;, Selection&gt; selection, ToLongFunction&lt;Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt;&gt; cacheDurationInMillis) {
+<a class="jxr_linenumber" name="L30" href="#L30">30</a>          CacheEntry entry = entries.compute(key, (k, current) -&gt; {
+<a class="jxr_linenumber" name="L31" href="#L31">31</a>              <strong class="jxr_keyword">if</strong> (current != <strong class="jxr_keyword">null</strong> &amp;&amp; (current.forever || !current.validUntil.isBefore(Instant.now(clock)))) {
+<a class="jxr_linenumber" name="L32" href="#L32">32</a>                  <strong class="jxr_keyword">return</strong> current;
+<a class="jxr_linenumber" name="L33" href="#L33">33</a>              }
+<a class="jxr_linenumber" name="L34" href="#L34">34</a>              Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt; remaining = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="L35" href="#L35">35</a>              <strong class="jxr_keyword">for</strong> (Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt; item : items) {
+<a class="jxr_linenumber" name="L36" href="#L36">36</a>                  Selection selected = selection.apply(item);
+<a class="jxr_linenumber" name="L37" href="#L37">37</a>                  <strong class="jxr_keyword">if</strong> (selected == Selection.REMAINING) {
+<a class="jxr_linenumber" name="L38" href="#L38">38</a>                      remaining = item;
+<a class="jxr_linenumber" name="L39" href="#L39">39</a>                  } <strong class="jxr_keyword">else</strong> <strong class="jxr_keyword">if</strong> (selected == Selection.SELECTED) {
+<a class="jxr_linenumber" name="L40" href="#L40">40</a>                      <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> CacheEntry(item, validUntil(cacheDurationInMillis.applyAsLong(item)));
+<a class="jxr_linenumber" name="L41" href="#L41">41</a>                  }
+<a class="jxr_linenumber" name="L42" href="#L42">42</a>              }
+<a class="jxr_linenumber" name="L43" href="#L43">43</a>              <strong class="jxr_keyword">if</strong> (remaining == <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L44" href="#L44">44</a>                  <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a name="NoSelectedFeatureException" href="../../../../../../io/github/jonasrutishauser/cdi/features/NoSelectedFeatureException.html#NoSelectedFeatureException">NoSelectedFeatureException</a>(k);
+<a class="jxr_linenumber" name="L45" href="#L45">45</a>              }
+<a class="jxr_linenumber" name="L46" href="#L46">46</a>              <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> CacheEntry(remaining, validUntil(cacheDurationInMillis.applyAsLong(remaining)));
+<a class="jxr_linenumber" name="L47" href="#L47">47</a>          });
+<a class="jxr_linenumber" name="L48" href="#L48">48</a>          <strong class="jxr_keyword">if</strong> (entry.validUntil.isBefore(Instant.now(clock))) {
+<a class="jxr_linenumber" name="L49" href="#L49">49</a>              entries.remove(key, entry);
+<a class="jxr_linenumber" name="L50" href="#L50">50</a>          }
+<a class="jxr_linenumber" name="L51" href="#L51">51</a>          <strong class="jxr_keyword">return</strong> entry.target;
+<a class="jxr_linenumber" name="L52" href="#L52">52</a>      }
+<a class="jxr_linenumber" name="L53" href="#L53">53</a>  
+<a class="jxr_linenumber" name="L54" href="#L54">54</a>      <strong class="jxr_keyword">private</strong> Instant validUntil(<strong class="jxr_keyword">long</strong> durationInMillis) {
+<a class="jxr_linenumber" name="L55" href="#L55">55</a>          <strong class="jxr_keyword">if</strong> (durationInMillis &lt; 0) {
+<a class="jxr_linenumber" name="L56" href="#L56">56</a>              <strong class="jxr_keyword">return</strong> Instant.MAX;
+<a class="jxr_linenumber" name="L57" href="#L57">57</a>          } <strong class="jxr_keyword">else</strong> <strong class="jxr_keyword">if</strong> (durationInMillis == 0) {
+<a class="jxr_linenumber" name="L58" href="#L58">58</a>              <strong class="jxr_keyword">return</strong> Instant.MIN;
+<a class="jxr_linenumber" name="L59" href="#L59">59</a>          }
+<a class="jxr_linenumber" name="L60" href="#L60">60</a>          <strong class="jxr_keyword">return</strong> Instant.now(clock).plusMillis(durationInMillis);
+<a class="jxr_linenumber" name="L61" href="#L61">61</a>      }
+<a class="jxr_linenumber" name="L62" href="#L62">62</a>  
+<a class="jxr_linenumber" name="L63" href="#L63">63</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> CacheEntry {
+<a class="jxr_linenumber" name="L64" href="#L64">64</a>          <strong class="jxr_keyword">final</strong> Bean&lt;?&gt; target;
+<a class="jxr_linenumber" name="L65" href="#L65">65</a>          <strong class="jxr_keyword">final</strong> Instant validUntil;
+<a class="jxr_linenumber" name="L66" href="#L66">66</a>          <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">boolean</strong> forever;
+<a class="jxr_linenumber" name="L67" href="#L67">67</a>  
+<a class="jxr_linenumber" name="L68" href="#L68">68</a>          <strong class="jxr_keyword">public</strong> CacheEntry(Bean&lt;?&gt; target, Instant validUntil) {
+<a class="jxr_linenumber" name="L69" href="#L69">69</a>              <strong class="jxr_keyword">this</strong>.target = target;
+<a class="jxr_linenumber" name="L70" href="#L70">70</a>              <strong class="jxr_keyword">this</strong>.validUntil = validUntil;
+<a class="jxr_linenumber" name="L71" href="#L71">71</a>              <strong class="jxr_keyword">this</strong>.forever = validUntil.equals(Instant.MAX);
+<a class="jxr_linenumber" name="L72" href="#L72">72</a>          }
+<a class="jxr_linenumber" name="L73" href="#L73">73</a>      }
+<a class="jxr_linenumber" name="L74" href="#L74">74</a>  
+<a class="jxr_linenumber" name="L75" href="#L75">75</a>  }
 </pre>
 <hr/>
 <div id="footer">© 2025</div>
