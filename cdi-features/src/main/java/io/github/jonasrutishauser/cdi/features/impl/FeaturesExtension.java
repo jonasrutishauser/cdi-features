@@ -100,8 +100,8 @@ public class FeaturesExtension implements Extension {
         if (type instanceof Class) {
             return (Class<?>) type;
         }
-        if (type instanceof ParameterizedType) {
-            return toClass(((ParameterizedType) type).getRawType());
+        if (type instanceof ParameterizedType parameterizedType) {
+            return toClass(parameterizedType.getRawType());
         }
         throw new IllegalStateException("unsupported type " + type);
     }

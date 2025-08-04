@@ -14,21 +14,29 @@ import jakarta.enterprise.inject.spi.Bean;
 
 class Cache {
 
-    private final ConcurrentMap<Contextual<?>, CacheEntry> cache = new ConcurrentHashMap<>();
+    public enum Selection {
+        SELECTED, NOT_SELECTED, REMAINING;
+
+        public static Selection of(boolean selected) {
+            return selected ? SELECTED : NOT_SELECTED;
+        }
+    }
+
+    private final ConcurrentMap<Contextual<?>, CacheEntry> entries = new ConcurrentHashMap<>();
     private final Clock clock = Clock.systemUTC();
 
     public <T> Bean<?> compute(Contextual<T> key, Collection<Bean<? extends T>> items,
-            Function<Bean<? extends T>, Boolean> selection, ToLongFunction<Bean<? extends T>> cacheDurationInMillis) {
-        CacheEntry entry = cache.compute(key, (k, current) -> {
+            Function<Bean<? extends T>, Selection> selection, ToLongFunction<Bean<? extends T>> cacheDurationInMillis) {
+        CacheEntry entry = entries.compute(key, (k, current) -> {
             if (current != null && (current.forever || !current.validUntil.isBefore(Instant.now(clock)))) {
                 return current;
             }
             Bean<? extends T> remaining = null;
             for (Bean<? extends T> item : items) {
-                Boolean selected = selection.apply(item);
-                if (selected == null) {
+                Selection selected = selection.apply(item);
+                if (selected == Selection.REMAINING) {
                     remaining = item;
-                } else if (selected.booleanValue()) {
+                } else if (selected == Selection.SELECTED) {
                     return new CacheEntry(item, validUntil(cacheDurationInMillis.applyAsLong(item)));
                 }
             }
@@ -38,7 +46,7 @@ class Cache {
             return new CacheEntry(remaining, validUntil(cacheDurationInMillis.applyAsLong(remaining)));
         });
         if (entry.validUntil.isBefore(Instant.now(clock))) {
-            cache.remove(key, entry);
+            entries.remove(key, entry);
         }
         return entry.target;
     }

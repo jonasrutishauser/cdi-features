@@ -1,15 +1,18 @@
 package io.github.jonasrutishauser.cdi.features.impl;
 
-import static jakarta.interceptor.Interceptor.Priority.LIBRARY_AFTER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import java.util.List;
+import java.lang.reflect.Field;
+import java.util.Collections;
+import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import org.jboss.weld.environment.se.WeldSEProvider;
 import org.jboss.weld.lite.extension.translator.BuildServicesImpl;
 import org.jboss.weld.lite.extension.translator.LiteExtensionTranslator;
 import org.junit.jupiter.api.BeforeAll;
@@ -20,23 +23,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import io.github.jonasrutishauser.cdi.features.Feature;
 import io.github.jonasrutishauser.cdi.features.Selector;
 import io.smallrye.config.inject.ConfigExtension;
-import jakarta.annotation.Priority;
 import jakarta.enterprise.inject.Produces;
-import jakarta.enterprise.inject.build.compatible.spi.BeanInfo;
+import jakarta.enterprise.inject.build.compatible.spi.BuildCompatibleExtension;
 import jakarta.enterprise.inject.build.compatible.spi.BuildServicesResolver;
-import jakarta.enterprise.inject.build.compatible.spi.ClassConfig;
-import jakarta.enterprise.inject.build.compatible.spi.Discovery;
-import jakarta.enterprise.inject.build.compatible.spi.Enhancement;
-import jakarta.enterprise.inject.build.compatible.spi.Messages;
-import jakarta.enterprise.inject.build.compatible.spi.MetaAnnotations;
-import jakarta.enterprise.inject.build.compatible.spi.Registration;
-import jakarta.enterprise.inject.build.compatible.spi.ScannedClasses;
-import jakarta.enterprise.inject.build.compatible.spi.Synthesis;
-import jakarta.enterprise.inject.build.compatible.spi.SyntheticComponents;
-import jakarta.enterprise.inject.build.compatible.spi.Types;
 import jakarta.enterprise.inject.se.SeContainer;
 import jakarta.enterprise.inject.se.SeContainerInitializer;
 import jakarta.enterprise.inject.spi.Bean;
+import jakarta.enterprise.inject.spi.CDI;
 import jakarta.enterprise.inject.spi.DefinitionException;
 import jakarta.enterprise.inject.spi.DeploymentException;
 import jakarta.enterprise.inject.spi.Extension;
@@ -46,16 +39,40 @@ class ExtensionIT {
     @BeforeAll
     static void setWeldBuildServices() {
         BuildServicesResolver.setBuildServices(new BuildServicesImpl());
+        CDI.setCDIProvider(new WeldSEProvider());
     }
 
     static Stream<Arguments> extensions() {
         return Stream.of( //
                 arguments(named("Full", new FeaturesExtension()), DefinitionException.class), //
                 arguments(
-                        named("Light", new LiteExtensionTranslator(List.of(TestFeaturesBuildCompatibleExtension.class),
-                                ExtensionIT.class.getClassLoader())),
+                        named("Light", forceAddExtension(new LiteExtensionTranslator(Collections.emptySet(),
+                                ExtensionIT.class.getClassLoader()), FeaturesBuildCompatibleExtension.class)),
                         DeploymentException.class) //
         );
+    }
+
+    // Workaround as the Weld implementation ignores all build compatible extensions with a SkipIfPortableExtensionPresent annotation.
+    private static Extension forceAddExtension(LiteExtensionTranslator translator,
+            Class<? extends BuildCompatibleExtension> extensionClass) {
+        try {
+            Field utilField = LiteExtensionTranslator.class.getDeclaredField("util");
+            utilField.setAccessible(true);
+            Object util = utilField.get(translator);
+            Field classesField = util.getClass().getDeclaredField("extensionClasses");
+            classesField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<String, Class<?>> extensionClasses = (Map<String, Class<?>>) classesField.get(util);
+            Field instancesField = util.getClass().getDeclaredField("extensionClassInstances");
+            instancesField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<Class<?>, Object> extensionClassInstances = (Map<Class<?>, Object>) instancesField.get(util);
+            extensionClasses.put(extensionClass.getName(), extensionClass);
+            extensionClassInstances.put(extensionClass, extensionClass.getDeclaredConstructor().newInstance());
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+        return translator;
     }
 
     static Stream<Arguments> validation() {
@@ -170,7 +187,12 @@ class ExtensionIT {
     }
 
     @Feature(propertyKey = "some.property", remaining = true)
-    static class PropertyKeyAndRemaining {}
+    static class PropertyKeyAndRemaining implements Supplier<String> {
+        @Override
+        public String get() {
+            return null;
+        }
+    }
 
     @Feature(selector = SelectorAndPropertyKey.class, propertyKey = "some.property")
     static class SelectorAndPropertyKey implements Selector {
@@ -214,46 +236,6 @@ class ExtensionIT {
         @Feature(propertyKey = "some.property")
         WithPropertyKeyOnClass method() {
             return new WithPropertyKeyOnClass();
-        }
-    }
-
-    public static class TestFeaturesBuildCompatibleExtension extends FeaturesBuildCompatibleExtension {
-        @Override
-        @Discovery
-        public void registerScope(MetaAnnotations metaAnnotations) {
-            super.registerScope(metaAnnotations);
-        }
-
-        @Override
-        @Discovery
-        public void registerTypes(ScannedClasses scannedClasses) {
-            super.registerTypes(scannedClasses);
-        }
-
-        @Override
-        @Enhancement(types = Cache.class)
-        public void setScopeOfCache(ClassConfig classConfig) {
-            super.setScopeOfCache(classConfig);
-        }
-
-        @Override
-        @Priority(LIBRARY_AFTER + 900)
-        @Enhancement(types = Object.class, withSubtypes = true, withAnnotations = Feature.class)
-        public void addIdentifier(ClassConfig classConfig, Messages messages) {
-            super.addIdentifier(classConfig, messages);
-        }
-
-        @Override
-        @Registration(types = Object.class)
-        public void discoverFeatures(BeanInfo bean, Types types, Messages messages) {
-            super.discoverFeatures(bean, types, messages);
-        }
-
-        @Override
-        @Priority(LIBRARY_AFTER + 500)
-        @Synthesis
-        public void registerFeatureSelectorBeans(SyntheticComponents components, Types types) {
-            super.registerFeatureSelectorBeans(components, types);
         }
     }
 

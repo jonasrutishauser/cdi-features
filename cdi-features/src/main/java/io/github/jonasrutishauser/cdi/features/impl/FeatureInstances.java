@@ -13,6 +13,7 @@ import io.github.jonasrutishauser.cdi.features.ContextualSelector;
 import io.github.jonasrutishauser.cdi.features.ContextualSelector.Context;
 import io.github.jonasrutishauser.cdi.features.Feature;
 import io.github.jonasrutishauser.cdi.features.Selector;
+import io.github.jonasrutishauser.cdi.features.impl.Cache.Selection;
 import jakarta.enterprise.context.spi.Contextual;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanAttributes;
@@ -34,16 +35,16 @@ class FeatureInstances<T> {
                 bean -> cacheDurationInMillis(contextual, bean)));
     }
 
-    private Boolean isSelected(Bean<?> bean) {
+    private Selection isSelected(Bean<?> bean) {
         ContextualSelector selector = selectors.get(bean);
         try {
             if (selector == null) {
-                return null;
+                return Selection.REMAINING;
             }
             if (selector instanceof Selector s) {
-                return s.selected();
+                return Selection.of(s.selected());
             }
-            return selector.selected(new Context() {
+            return Selection.of(selector.selected(new Context() {
                 @Override
                 public Bean<?> bean() {
                     return bean;
@@ -53,9 +54,9 @@ class FeatureInstances<T> {
                 public Object instance() {
                     return instances.get(bean);
                 }
-            });
+            }));
         } catch (RuntimeException e) {
-            return false;
+            return Selection.NOT_SELECTED;
         }
     }
 
