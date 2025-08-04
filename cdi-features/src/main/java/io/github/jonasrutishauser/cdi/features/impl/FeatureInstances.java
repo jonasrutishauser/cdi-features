@@ -1,10 +1,8 @@
 package io.github.jonasrutishauser.cdi.features.impl;
 
-import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.feature;
-import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.isDefined;
-
 import java.lang.reflect.Type;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalLong;
 
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -33,6 +31,18 @@ class FeatureInstances<T> {
     public T selected(Contextual<T> contextual) {
         return instances.get(cache.compute(contextual, selectors.keySet(), this::isSelected,
                 bean -> cacheDurationInMillis(contextual, bean)));
+    }
+
+    static Optional<Feature> feature(Bean<?> bean) {
+        return bean.getQualifiers() //
+                .stream() //
+                .filter(Feature.class::isInstance) //
+                .map(Feature.class::cast) //
+                .findAny();
+    }
+
+    static boolean isDefined(String value) {
+        return !value.isEmpty();
     }
 
     private Selection isSelected(Bean<?> bean) {

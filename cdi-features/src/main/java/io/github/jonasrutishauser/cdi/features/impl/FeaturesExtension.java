@@ -1,5 +1,7 @@
 package io.github.jonasrutishauser.cdi.features.impl;
 
+import static io.github.jonasrutishauser.cdi.features.impl.FeatureInstances.feature;
+import static io.github.jonasrutishauser.cdi.features.impl.FeatureInstances.isDefined;
 import static jakarta.interceptor.Interceptor.Priority.LIBRARY_AFTER;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
@@ -106,14 +108,6 @@ public class FeaturesExtension implements Extension {
         throw new IllegalStateException("unsupported type " + type);
     }
 
-    static Optional<Feature> feature(Bean<?> bean) {
-        return bean.getQualifiers() //
-                .stream() //
-                .filter(Feature.class::isInstance) //
-                .map(Feature.class::cast) //
-                .findAny();
-    }
-
     void registerFeatureSelectorBeans(@Priority(LIBRARY_AFTER + 500) @Observes AfterBeanDiscovery abd, BeanManager beanManager) {
         for (Entry<Type, Set<Bean<?>>> feature : getFeatures().entrySet()) {
             if (beanManager.getBeans(feature.getKey()).isEmpty()) {
@@ -195,10 +189,6 @@ public class FeaturesExtension implements Extension {
 
     static boolean hasDefinedSelector(Feature feature) {
         return !Selector.class.equals(feature.selector());
-    }
-
-    static boolean isDefined(String value) {
-        return !value.isEmpty();
     }
 
     void registerContext(@Observes AfterBeanDiscovery abd) {

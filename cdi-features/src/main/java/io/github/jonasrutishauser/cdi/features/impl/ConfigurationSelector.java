@@ -1,6 +1,6 @@
 package io.github.jonasrutishauser.cdi.features.impl;
 
-import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.feature;
+import static io.github.jonasrutishauser.cdi.features.impl.FeatureInstances.feature;
 
 import java.util.Optional;
 

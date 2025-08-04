@@ -1,9 +1,9 @@
 package io.github.jonasrutishauser.cdi.features.impl;
 
+import static io.github.jonasrutishauser.cdi.features.impl.FeatureInstances.feature;
+import static io.github.jonasrutishauser.cdi.features.impl.FeatureInstances.isDefined;
 import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.createInstance;
-import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.feature;
 import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.hasDefinedSelector;
-import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.isDefined;
 
 import java.lang.annotation.Annotation;
 import java.util.Arrays;

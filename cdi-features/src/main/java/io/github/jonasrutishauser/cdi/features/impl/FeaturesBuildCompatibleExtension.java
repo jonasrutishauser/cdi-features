@@ -1,6 +1,6 @@
 package io.github.jonasrutishauser.cdi.features.impl;
 
-import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.isDefined;
+import static io.github.jonasrutishauser.cdi.features.impl.FeatureInstances.isDefined;
 import static jakarta.interceptor.Interceptor.Priority.LIBRARY_AFTER;
 import static jakarta.interceptor.Interceptor.Priority.LIBRARY_BEFORE;
 
