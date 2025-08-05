@@ -18,7 +18,7 @@ class SampleFeature2Selector implements ContextualSelector {
 
     @Override
     public boolean selected(Context context) {
-        assertEquals("SampleFeature2", ((SampleFeature) context.instance()).test());
+        assertEquals("SampleFeature2", context.bean().getBeanClass().getSimpleName());
         return config.getSelected() == 2;
     }
 

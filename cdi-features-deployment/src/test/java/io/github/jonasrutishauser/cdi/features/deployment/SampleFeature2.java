@@ -1,14 +1,27 @@
 package io.github.jonasrutishauser.cdi.features.deployment;
 
 import io.github.jonasrutishauser.cdi.features.Feature;
-import io.github.jonasrutishauser.cdi.features.Feature.Cache;
-import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.annotation.PreDestroy;
+import jakarta.enterprise.context.Dependent;
+import jakarta.inject.Inject;
 
-@ApplicationScoped
-@Feature(selector = SampleFeature2Selector.class, cache = @Cache(durationMillis = -1))
+@Dependent
+@Feature(selector = SampleFeature2Selector.class)
 class SampleFeature2 implements SampleFeature {
+    private final Config config;
+
+    @Inject
+    SampleFeature2(Config config) {
+        this.config = config;
+    }
+
     @Override
     public String test() {
         return "SampleFeature2";
+    }
+
+    @PreDestroy
+    void destroy() {
+        config.setDestroyed();
     }
 }

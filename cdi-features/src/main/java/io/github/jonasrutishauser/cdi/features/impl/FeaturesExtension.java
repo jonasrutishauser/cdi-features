@@ -16,6 +16,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import io.github.jonasrutishauser.cdi.features.ContextualSelector;
 import io.github.jonasrutishauser.cdi.features.Feature;
@@ -139,10 +140,10 @@ public class FeaturesExtension implements Extension {
 
     private Object createDummy(BeanManager beanManager, Type type, CreationalContext<Object> ctx,
             Set<Bean<?>> features) {
-        Map<Bean<?>, Object> instances = getFeatureInstances(beanManager, type, ctx, features);
+        Map<Bean<?>, Supplier<Object>> instances = getFeatureInstances(beanManager, type, ctx, features);
         context.setInstances(beanManager.resolve(beanManager.getBeans(type)),
                 new FeatureInstances<>(instances, getSelectors(beanManager, ctx, instances), getCache(beanManager, ctx)));
-        return instances.values().iterator().next();
+        return instances.values().iterator().next().get();
     }
 
     private Cache getCache(BeanManager beanManager, CreationalContext<Object> ctx) {
@@ -150,15 +151,18 @@ public class FeaturesExtension implements Extension {
                 ctx);
     }
 
-    private static Map<Bean<?>, Object> getFeatureInstances(BeanManager beanManager, Type type, CreationalContext<Object> ctx,
-            Set<Bean<?>> features) {
-        return features.stream().collect(toMap(identity(), bean -> beanManager.getReference(bean, type, ctx)));
+    private static Map<Bean<?>, Supplier<Object>> getFeatureInstances(BeanManager beanManager, Type type,
+            CreationalContext<Object> ctx, Set<Bean<?>> features) {
+        return features.stream().collect(toMap(identity(), bean -> {
+            Object instance = beanManager.getReference(bean, type, ctx);
+            return () -> instance;
+        }));
     }
 
     private static Map<Bean<?>, ContextualSelector> getSelectors(BeanManager beanManager, CreationalContext<Object> ctx,
-            Map<Bean<?>, Object> instances) {
+            Map<Bean<?>, Supplier<Object>> instances) {
         Map<Bean<?>, ContextualSelector> selectors = new HashMap<>();
-        for (Entry<Bean<?>, Object> instance : instances.entrySet()) {
+        for (Entry<Bean<?>, Supplier<Object>> instance : instances.entrySet()) {
             Feature feature = feature(instance.getKey()).orElseThrow();
             ContextualSelector selector;
             if (feature.remaining()) {
@@ -176,7 +180,7 @@ public class FeaturesExtension implements Extension {
                         beanManager.resolve(beanManager.getBeans(ConfigurationSelector.class)),
                         ContextualSelector.class, ctx);
             } else {
-                selector = (Selector) instance.getValue();
+                selector = (Selector) instance.getValue().get();
             }
             selectors.put(instance.getKey(), selector);
         }

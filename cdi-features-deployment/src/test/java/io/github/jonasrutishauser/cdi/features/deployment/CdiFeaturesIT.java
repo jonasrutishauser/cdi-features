@@ -1,6 +1,7 @@
 package io.github.jonasrutishauser.cdi.features.deployment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
@@ -104,6 +105,7 @@ class CdiFeaturesIT {
         assertEquals("SampleFeature2", genericFeatureInstance.get().test());
         genericFeatureInstance.destroy(genericFeatureInstance.get());
         assertTrue(config.isDestroyed(), "Beans should be destroyed");
+        assertFalse(config.isFeature3Created(), "Feature3 should not be created");
         assertEquals("SampleFeature2", genericFeatureInstance.get().test());
     }
 

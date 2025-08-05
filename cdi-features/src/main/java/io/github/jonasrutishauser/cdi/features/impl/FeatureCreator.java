@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -35,18 +36,19 @@ public class FeatureCreator implements SyntheticBeanCreator<Object>  {
     }
 
     static <T> T create(Bean<T> ownBean, Stream<? extends Handle<? extends T>> instancesStream, Lookup lookup) {
-        Map<Bean<? extends T>, T> instances = instancesStream.collect(Collectors.toMap(Handle::getBean, Handle::get));
-        Map<Bean<? extends T>, ContextualSelector> selectors = getSelectors(lookup, instances);
+        Map<Bean<? extends T>, Supplier<T>> instances = instancesStream
+                .collect(Collectors.toMap(Handle::getBean, handle -> handle::get));
+        Map<Bean<? extends T>, ContextualSelector> selectors = getSelectors(ownBean, lookup, instances);
         FeatureContext context = (FeatureContext) lookup.getReference(BeanManager.class)
                 .getContext(FeatureScoped.class);
         context.setInstances(ownBean, new FeatureInstances<>(instances, selectors, lookup.getReference(Cache.class)));
-        return instances.values().iterator().next();
+        return instances.values().iterator().next().get();
     }
 
-    private static <T> Map<Bean<? extends T>, ContextualSelector> getSelectors(Lookup lookup,
-            Map<Bean<? extends T>, T> instances) {
+    private static <T> Map<Bean<? extends T>, ContextualSelector> getSelectors(Bean<T> ownBean, Lookup lookup,
+            Map<Bean<? extends T>, Supplier<T>> instances) {
         Map<Bean<? extends T>, ContextualSelector> selectors = new HashMap<>();
-        for (Entry<Bean<? extends T>, T> instance : instances.entrySet()) {
+        for (Entry<Bean<? extends T>, Supplier<T>> instance : instances.entrySet()) {
             Feature feature = feature(instance.getKey()).orElseThrow();
             ContextualSelector selector;
             if (feature.remaining()) {
@@ -60,7 +62,7 @@ public class FeatureCreator implements SyntheticBeanCreator<Object>  {
             } else if (isDefined(feature.propertyKey())) {
                 selector = lookup.getReference(ConfigurationSelector.class);
             } else {
-                selector = (Selector) instance.getValue();
+                selector = (Selector) () -> ((Selector) instance.getValue().get()).selected();
             }
             selectors.put(instance.getKey(), selector);
         }

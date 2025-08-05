@@ -4,6 +4,7 @@ import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.function.Supplier;
 
 import org.eclipse.microprofile.config.ConfigProvider;
 
@@ -17,11 +18,11 @@ import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanAttributes;
 
 class FeatureInstances<T> {
-    private final Map<Bean<? extends T>, T> instances;
+    private final Map<Bean<? extends T>, Supplier<T>> instances;
     private final Map<Bean<? extends T>, ContextualSelector> selectors;
     private final Cache cache;
 
-    public FeatureInstances(Map<Bean<? extends T>, T> instances, Map<Bean<? extends T>, ContextualSelector> selectors,
+    public FeatureInstances(Map<Bean<? extends T>, Supplier<T>> instances, Map<Bean<? extends T>, ContextualSelector> selectors,
             Cache cache) {
         this.instances = instances;
         this.selectors = selectors;
@@ -29,8 +30,8 @@ class FeatureInstances<T> {
     }
 
     public T selected(Contextual<T> contextual) {
-        return instances.get(cache.compute(contextual, selectors.keySet(), this::isSelected,
-                bean -> cacheDurationInMillis(contextual, bean)));
+        return instances.get((Bean<?>) cache.compute(contextual, selectors.keySet(), this::isSelected,
+                bean -> cacheDurationInMillis(contextual, bean))).get();
     }
 
     static Optional<Feature> feature(Bean<?> bean) {
@@ -62,7 +63,7 @@ class FeatureInstances<T> {
 
                 @Override
                 public Object instance() {
-                    return instances.get(bean);
+                    return instances.get(bean).get();
                 }
             }));
         } catch (RuntimeException e) {

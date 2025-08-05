@@ -90,10 +90,11 @@ public abstract class AbstractIT {
         private int selected;
         private boolean destroyed;
         private boolean selectorDestroyed;
+        private boolean feature3Created;
 
         public void setSelected(int selected) {
             this.selected = selected;
-            destroyed = selectorDestroyed = false;
+            destroyed = selectorDestroyed = feature3Created = false;
         }
 
         public int getSelected() {
@@ -104,12 +105,20 @@ public abstract class AbstractIT {
             return destroyed && selectorDestroyed;
         }
 
+        public boolean isFeature3Created() {
+            return feature3Created;
+        }
+
         public void setDestroyed() {
             this.destroyed = true;
         }
 
         public void setSelectorDestroyed() {
             this.selectorDestroyed = true;
+        }
+
+        public void setFeature3Created() {
+            this.feature3Created = true;
         }
     }
 
@@ -139,19 +148,26 @@ public abstract class AbstractIT {
         public boolean selected() {
             return config.getSelected() == 1;
         }
+    }
+
+    @Dependent
+    @Feature(selector = SampleFeature2Selector.class)
+    static class SampleFeature2 implements SampleFeature {
+        private final Config config;
+
+        @Inject
+        SampleFeature2(Config config) {
+            this.config = config;
+        }
+
+        @Override
+        public String test() {
+            return "SampleFeature2";
+        }
 
         @PreDestroy
         void destroy() {
             config.setDestroyed();
-        }
-    }
-
-    @ApplicationScoped
-    @Feature(selector = SampleFeature2Selector.class, cache = @Cache(durationMillis = -1))
-    static class SampleFeature2 implements SampleFeature {
-        @Override
-        public String test() {
-            return "SampleFeature2";
         }
     }
 
@@ -166,7 +182,7 @@ public abstract class AbstractIT {
 
         @Override
         public boolean selected(Context context) {
-            assertEquals("SampleFeature2", ((SampleFeature) context.instance()).test());
+            assertEquals("SampleFeature2", context.bean().getBeanClass().getSimpleName());
             return config.getSelected() == 2;
         }
 
@@ -176,9 +192,17 @@ public abstract class AbstractIT {
         }
     }
 
-    @Dependent
-    @Feature(propertyKey = "feature", propertyValue = "3")
+    @ApplicationScoped
+    @Feature(propertyKey = "feature", propertyValue = "3", cache = @Cache(durationMillis = 0))
     static class SampleFeature3 implements SampleFeature {
+        SampleFeature3() {
+        }
+
+        @Inject
+        SampleFeature3(Config config) {
+            config.setFeature3Created();
+        }
+
         @Override
         public String test() {
             return "SampleFeature3";

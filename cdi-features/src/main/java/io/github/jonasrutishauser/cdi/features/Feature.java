@@ -54,7 +54,7 @@ public @interface Feature {
          * @return the cache duration in milliseconds. The value {@code 0} means no
          *         caching and any negative value means forever.
          */
-        long durationMillis() default 0;
+        long durationMillis() default -1;
 
         /**
          * @return the property key which defines the duration. It is possible to use

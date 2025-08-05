@@ -1,9 +1,8 @@
 package io.github.jonasrutishauser.cdi.features.deployment;
 
 import io.github.jonasrutishauser.cdi.features.Feature;
-import io.github.jonasrutishauser.cdi.features.Selector;
 import io.github.jonasrutishauser.cdi.features.Feature.Cache;
-import jakarta.annotation.PreDestroy;
+import io.github.jonasrutishauser.cdi.features.Selector;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 
@@ -25,10 +24,5 @@ class SampleFeature1 implements SampleFeature, Selector {
     @Override
     public boolean selected() {
         return config.getSelected() == 1;
-    }
-
-    @PreDestroy
-    void destroy() {
-        config.setDestroyed();
     }
 }
