@@ -23,6 +23,7 @@
 
 	<modules>
 		<module>cdi-features</module>
+		<module>cdi-features-ee9-test</module>
 		<module>cdi-features-deployment</module>
 	</modules>
 

@@ -17,7 +17,17 @@ class WeldIT extends AbstractIT {
 
     @BeforeAll
     static void setWeldBuildServices() {
-        BuildServicesResolver.setBuildServices(new BuildServicesImpl());
+        try {
+            Initializer.setWeldBuildServices();
+        } catch (NoClassDefFoundError e) {
+            // ignore
+        }
+    }
+
+    static class Initializer {
+        static void setWeldBuildServices() {
+            BuildServicesResolver.setBuildServices(new BuildServicesImpl());
+        }
     }
 
 }
