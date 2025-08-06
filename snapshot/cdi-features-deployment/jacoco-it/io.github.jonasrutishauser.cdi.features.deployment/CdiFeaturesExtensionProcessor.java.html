@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CdiFeaturesExtensionProcessor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CDI Features Quarkus Extension</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features.deployment</a> &gt; <span class="el_source">CdiFeaturesExtensionProcessor.java</span></div><h1>CdiFeaturesExtensionProcessor.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features.deployment;
+
+import static io.github.jonasrutishauser.cdi.features.impl.ArcFeatureCreator.CACHE_CLASS;
+import static io.github.jonasrutishauser.cdi.features.impl.ArcFeatureCreator.CONFIGURATION_SELECTOR_CLASS;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationTransformation;
+import org.jboss.jandex.AnnotationValue;
+import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.DotName;
+import org.jboss.jandex.ParameterizedType;
+import org.jboss.jandex.Type;
+import org.jboss.jandex.Type.Kind;
+
+import io.github.jonasrutishauser.cdi.features.Feature;
+import io.github.jonasrutishauser.cdi.features.Selector;
+import io.github.jonasrutishauser.cdi.features.impl.ArcFeatureCreator;
+import io.github.jonasrutishauser.cdi.features.impl.FeatureScoped;
+import io.github.jonasrutishauser.cdi.features.impl.Identified;
+import io.quarkus.arc.SyntheticCreationalContext;
+import io.quarkus.arc.deployment.AnnotationsTransformerBuildItem;
+import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
+import io.quarkus.arc.deployment.BeanRegistrationPhaseBuildItem;
+import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
+import io.quarkus.arc.deployment.SyntheticBeanBuildItem.ExtendedBeanConfigurator;
+import io.quarkus.arc.processor.AnnotationLiteralProcessor;
+import io.quarkus.arc.processor.BeanInfo;
+import io.quarkus.deployment.GeneratedClassGizmoAdaptor;
+import io.quarkus.deployment.annotations.BuildProducer;
+import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.builditem.FeatureBuildItem;
+import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
+import io.quarkus.gizmo.ClassCreator;
+import io.quarkus.gizmo.MethodDescriptor;
+import io.quarkus.gizmo.SignatureBuilder;
+import jakarta.enterprise.inject.Default;
+import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.enterprise.inject.spi.BeanManager;
+import jakarta.enterprise.util.TypeLiteral;
+
+<span class="fc" id="L46">public class CdiFeaturesExtensionProcessor {</span>
+
+    private static final String FEATURE = &quot;cdi-features&quot;;
+
+    @BuildStep
+    FeatureBuildItem feature() {
+<span class="fc" id="L52">        return new FeatureBuildItem(FEATURE);</span>
+    }
+
+    @BuildStep
+    AnnotationsTransformerBuildItem setQuarkusDeployment() {
+<span class="fc" id="L57">        return new AnnotationsTransformerBuildItem(</span>
+<span class="fc" id="L58">                AnnotationTransformation.forClasses().priority(0).whenClass(DotName.createSimple(CACHE_CLASS))</span>
+<span class="fc" id="L59">                        .transform(t -&gt; t.addAll(AnnotationInstance.builder(Default.class).build(),</span>
+<span class="fc" id="L60">                                AnnotationInstance.builder(Identified.class).value(0l).build())));</span>
+    }
+
+    @BuildStep
+    void improveFeatureBeans(BeanDiscoveryFinishedBuildItem discoveryFinished,
+            BeanRegistrationPhaseBuildItem beanRegistrationPhase, BuildProducer&lt;SyntheticBeanBuildItem&gt; syntheticBean,
+            BuildProducer&lt;GeneratedClassBuildItem&gt; generatedClass) {
+<span class="fc" id="L67">        AnnotationLiteralProcessor annotationLiteralProcessor = beanRegistrationPhase.getBeanProcessor()</span>
+<span class="fc" id="L68">                .getAnnotationLiteralProcessor();</span>
+<span class="fc" id="L69">        Type objectType = Type.create(Object.class);</span>
+<span class="fc" id="L70">        AnnotationInstance featureAnnotation = AnnotationInstance.builder(Feature.class).build();</span>
+<span class="fc" id="L71">        Optional&lt;ClassInfo&gt; featureClass = beanRegistrationPhase.getBeanProcessor().getBeanDeployment().getQualifiers()</span>
+<span class="fc" id="L72">                .stream().filter(c -&gt; DotName.createSimple(Feature.class).equals(c.name())).findAny();</span>
+<span class="fc" id="L73">        GeneratedClassGizmoAdaptor classGizmoAdaptor = new GeneratedClassGizmoAdaptor(generatedClass, true);</span>
+<span class="fc" id="L74">        Map&lt;String, Integer&gt; counter = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L75">        discoveryFinished.beanStream().withQualifier(Identified.class).withScope(FeatureScoped.class).forEach(bean -&gt; {</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">            Type beanType = bean.getTypes().stream().filter(t -&gt; !objectType.equals(t)).findAny().get();</span>
+<span class="fc" id="L77">            ParameterizedType instanceType = ParameterizedType.create(Instance.class, beanType);</span>
+<span class="fc" id="L78">            String classNamePrefix = beanType.toString();</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">            if (classNamePrefix.contains(&quot;&lt;&quot;)) {</span>
+<span class="fc" id="L80">                classNamePrefix = classNamePrefix.substring(0, classNamePrefix.indexOf('&lt;'));</span>
+            }
+<span class="fc" id="L82">            String instanceTypeLiteralName = classNamePrefix + &quot;$$instanceTypeLiteral$$&quot;</span>
+<span class="pc bpc" id="L83" title="1 of 2 branches missed.">                    + counter.compute(classNamePrefix, (key, value) -&gt; value == null ? 0 : value++);</span>
+<span class="fc" id="L84">            ClassCreator.builder().classOutput(classGizmoAdaptor).className(instanceTypeLiteralName)</span>
+<span class="fc" id="L85">                    .signature(SignatureBuilder.forClass()</span>
+<span class="fc" id="L86">                            .setSuperClass(toGizmo(ParameterizedType.create(TypeLiteral.class, instanceType))))</span>
+<span class="fc" id="L87">                    .build().close();</span>
+<span class="fc" id="L88">            ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem.configure(bean.getBeanClass()) //</span>
+<span class="fc" id="L89">                    .types(bean.getTypes().toArray(Type[]::new)) //</span>
+<span class="fc" id="L90">                    .scope(FeatureScoped.class) //</span>
+<span class="fc" id="L91">                    .addInjectionPoint(instanceType, featureAnnotation) //</span>
+<span class="fc" id="L92">                    .addInjectionPoint(Type.create(BeanManager.class)) //</span>
+<span class="fc" id="L93">                    .addInjectionPoint(Type.create(DotName.createSimple(CACHE_CLASS), Kind.CLASS)) //</span>
+<span class="fc" id="L94">                    .creator(mc -&gt; {</span>
+<span class="fc" id="L95">                        MethodDescriptor create = MethodDescriptor.ofMethod(ArcFeatureCreator.class, &quot;create&quot;,</span>
+                                Object.class, SyntheticCreationalContext.class, TypeLiteral.class, Bean.class,
+                                Feature.class);
+<span class="fc" id="L98">                        MethodDescriptor instanceLiteralConstructor = MethodDescriptor</span>
+<span class="fc" id="L99">                                .ofConstructor(instanceTypeLiteralName);</span>
+<span class="fc" id="L100">                        mc.returnValue(mc.invokeStaticMethod(create, //</span>
+<span class="fc" id="L101">                                mc.getMethodParam(0), //</span>
+<span class="fc" id="L102">                                mc.newInstance(instanceLiteralConstructor), //</span>
+<span class="fc" id="L103">                                mc.getThis(),</span>
+<span class="fc" id="L104">                                annotationLiteralProcessor.create(mc, featureClass.get(), featureAnnotation)));</span>
+<span class="fc" id="L105">                    });</span>
+<span class="fc" id="L106">            addSelectors(configurator, discoveryFinished, beanType, featureAnnotation);</span>
+<span class="fc" id="L107">            syntheticBean.produce(configurator.done());</span>
+<span class="fc" id="L108">        });</span>
+<span class="fc" id="L109">    }</span>
+
+    private void addSelectors(ExtendedBeanConfigurator configurator, BeanDiscoveryFinishedBuildItem discoveryFinished,
+            Type beanType, AnnotationInstance featureAnnotation) {
+<span class="fc" id="L113">        Type selectorClass = Type.create(Selector.class);</span>
+<span class="fc" id="L114">        boolean configurationSelectorAdded = false;</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">        for (BeanInfo featureBean : discoveryFinished.beanStream().assignableTo(beanType, featureAnnotation)</span>
+<span class="fc" id="L116">                .collect()) {</span>
+<span class="fc" id="L117">            AnnotationInstance feature = featureBean.getQualifier(DotName.createSimple(Feature.class)).orElseThrow();</span>
+<span class="fc" id="L118">            AnnotationValue selectorValue = feature.value(&quot;selector&quot;);</span>
+<span class="fc" id="L119">            AnnotationValue propertyKeyValue = feature.value(&quot;propertyKey&quot;);</span>
+<span class="pc bpc" id="L120" title="1 of 4 branches missed.">            if (selectorValue != null &amp;&amp; !selectorClass.equals(selectorValue.asClass())) {</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">                if (!discoveryFinished.beanStream().assignableTo(selectorValue.asClass()).isEmpty()) {</span>
+<span class="fc" id="L122">                    configurator.addInjectionPoint(selectorValue.asClass());</span>
+                }
+            } else
+<span class="pc bpc" id="L125" title="1 of 6 branches missed.">                if (!configurationSelectorAdded &amp;&amp; propertyKeyValue != null &amp;&amp; !propertyKeyValue.asString().isEmpty()) {</span>
+<span class="fc" id="L126">                    configurator.addInjectionPoint(</span>
+<span class="fc" id="L127">                            Type.create(DotName.createSimple(CONFIGURATION_SELECTOR_CLASS), Kind.CLASS));</span>
+<span class="fc" id="L128">                    configurationSelectorAdded = true;</span>
+                }
+<span class="fc" id="L130">        }</span>
+<span class="fc" id="L131">    }</span>
+
+    private io.quarkus.gizmo.Type.ParameterizedType toGizmo(ParameterizedType parameterizedType) {
+<span class="fc" id="L134">        return io.quarkus.gizmo.Type.parameterizedType(io.quarkus.gizmo.Type.classType(parameterizedType.name()),</span>
+<span class="fc" id="L135">                parameterizedType.arguments().stream().map(type -&gt; {</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">                    if (type.kind() == Kind.PARAMETERIZED_TYPE) {</span>
+<span class="fc" id="L137">                        return toGizmo(type.asParameterizedType());</span>
+                    } else {
+<span class="fc" id="L139">                        return io.quarkus.gizmo.Type.classType(type.name());</span>
+                    }
+<span class="fc" id="L141">                }).toArray(io.quarkus.gizmo.Type[]::new));</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
