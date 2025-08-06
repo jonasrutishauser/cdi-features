@@ -38,7 +38,7 @@
 <a class="jxr_linenumber" name="L30" href="#L30">30</a>      }
 <a class="jxr_linenumber" name="L31" href="#L31">31</a>  
 <a class="jxr_linenumber" name="L32" href="#L32">32</a>      <strong class="jxr_keyword">public</strong> T selected(Contextual&lt;T&gt; contextual) {
-<a class="jxr_linenumber" name="L33" href="#L33">33</a>          <strong class="jxr_keyword">return</strong> instances.get((Bean&lt;?&gt;) cache.compute(contextual, selectors.keySet(), <strong class="jxr_keyword">this</strong>::isSelected,
+<a class="jxr_linenumber" name="L33" href="#L33">33</a>          <strong class="jxr_keyword">return</strong> instances.get(cache.compute(contextual, selectors.keySet(), <strong class="jxr_keyword">this</strong>::isSelected,
 <a class="jxr_linenumber" name="L34" href="#L34">34</a>                  bean -&gt; cacheDurationInMillis(contextual, bean))).get();
 <a class="jxr_linenumber" name="L35" href="#L35">35</a>      }
 <a class="jxr_linenumber" name="L36" href="#L36">36</a>  
