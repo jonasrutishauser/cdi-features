@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   release:
-    uses: jonasrutishauser/parent/.github/workflows/common-release.yml@v31
+    uses: jonasrutishauser/parent/.github/workflows/common-release.yml@v33
     with:
       name: 'CDI Features'
       java-version: '17'
