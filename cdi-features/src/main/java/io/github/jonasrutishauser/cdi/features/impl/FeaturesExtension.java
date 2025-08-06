@@ -33,8 +33,13 @@ import jakarta.enterprise.inject.spi.BeforeBeanDiscovery;
 import jakarta.enterprise.inject.spi.BeforeShutdown;
 import jakarta.enterprise.inject.spi.Extension;
 import jakarta.enterprise.inject.spi.ProcessBean;
+import jakarta.enterprise.util.TypeLiteral;
 
 public class FeaturesExtension implements Extension {
+
+    private static final Type GENERIC_CONTEXTUAL_SELECTOR_TYPE = new TypeLiteral<ContextualSelector<?>>() {
+        private static final long serialVersionUID = 1L;
+    }.getType();
 
     private final FeatureContext context = new FeatureContext();
 
@@ -57,15 +62,15 @@ public class FeaturesExtension implements Extension {
         }
     }
 
-    void discoverFeatures(@Observes ProcessBean<?> bean) {
+    void discoverFeatures(@Observes ProcessBean<?> bean, BeanManager beanManager) {
         Optional<Feature> feature = feature(bean.getBean());
         if (feature.isPresent()) {
-            validate(feature.get(), bean.getBean(), bean::addDefinitionError);
+            validate(feature.get(), bean.getBean(), beanManager, bean::addDefinitionError);
             featureBeans.add(bean.getBean());
         }
     }
 
-    private void validate(Feature feature, Bean<?> bean, Consumer<Throwable> definitionError) {
+    private void validate(Feature feature, Bean<?> bean, BeanManager beanManager, Consumer<Throwable> definitionError) {
         if (feature.remaining()) {
             if (hasDefinedSelector(feature)) {
                 definitionError.accept(
@@ -80,6 +85,7 @@ public class FeaturesExtension implements Extension {
                 definitionError.accept(
                         new IllegalStateException("propertyKey must not be set if selector is set on bean " + bean));
             }
+            validateSelectorType(feature.selector(), bean, beanManager, definitionError);
         } else if (isDefined(feature.propertyKey()) && !mpConfigAvailable) {
             definitionError.accept(new IllegalStateException(
                     "as MicroProfile Config is not available, propertyKey must not be set on bean " + bean));
@@ -93,6 +99,19 @@ public class FeaturesExtension implements Extension {
                     "propertyValue must not be set if propertyKey is not set on bean " + bean));
         }
         validateCacheDurationMillisProperty(feature, bean, definitionError);
+    }
+
+    private void validateSelectorType(Class<? extends ContextualSelector<?>> selector, Bean<?> bean,
+            BeanManager beanManager, Consumer<Throwable> definitionError) {
+        beanManager.createAnnotatedType(selector).getTypeClosure()
+                .stream()
+                .filter(type -> type instanceof ParameterizedType parametrizedType
+                        && ContextualSelector.class.equals(parametrizedType.getRawType()))
+                .map(ParameterizedType.class::cast) //
+                .map(type -> type.getActualTypeArguments()[0]) //
+                .filter(type -> !bean.getTypes().contains(type)) //
+                .forEach(type -> definitionError.accept(new IllegalStateException("selector type " + selector.getName()
+                        + " accepts beans with type " + type.getTypeName() + ", which is not a type of the bean " + bean)));
     }
 
     private void validateCacheDurationMillisProperty(Feature feature, Bean<?> bean,
@@ -138,9 +157,9 @@ public class FeaturesExtension implements Extension {
         return features;
     }
 
-    private Object createDummy(BeanManager beanManager, Type type, CreationalContext<Object> ctx,
-            Set<Bean<?>> features) {
-        Map<Bean<?>, Supplier<Object>> instances = getFeatureInstances(beanManager, type, ctx, features);
+    private <T> T createDummy(BeanManager beanManager, Type type, CreationalContext<Object> ctx,
+            Set<Bean<? extends T>> features) {
+        Map<Bean<? extends T>, Supplier<T>> instances = getFeatureInstances(beanManager, type, ctx, features);
         context.setInstances(beanManager.resolve(beanManager.getBeans(type)),
                 new FeatureInstances<>(instances, getSelectors(beanManager, ctx, instances), getCache(beanManager, ctx)));
         return instances.values().iterator().next().get();
@@ -151,20 +170,21 @@ public class FeaturesExtension implements Extension {
                 ctx);
     }
 
-    private static Map<Bean<?>, Supplier<Object>> getFeatureInstances(BeanManager beanManager, Type type,
-            CreationalContext<Object> ctx, Set<Bean<?>> features) {
+    private static <T> Map<Bean<? extends T>, Supplier<T>> getFeatureInstances(BeanManager beanManager, Type type,
+            CreationalContext<Object> ctx, Set<Bean<? extends T>> features) {
         return features.stream().collect(toMap(identity(), bean -> {
-            Object instance = beanManager.getReference(bean, type, ctx);
+            @SuppressWarnings("unchecked")
+            T instance = (T) beanManager.getReference(bean, type, ctx);
             return () -> instance;
         }));
     }
 
-    private static Map<Bean<?>, ContextualSelector> getSelectors(BeanManager beanManager, CreationalContext<Object> ctx,
-            Map<Bean<?>, Supplier<Object>> instances) {
-        Map<Bean<?>, ContextualSelector> selectors = new HashMap<>();
-        for (Entry<Bean<?>, Supplier<Object>> instance : instances.entrySet()) {
+    private static <T> Map<Bean<? extends T>, ContextualSelector<? super T>> getSelectors(BeanManager beanManager, CreationalContext<Object> ctx,
+            Map<Bean<? extends T>, Supplier<T>> instances) {
+        Map<Bean<? extends T>, ContextualSelector<? super T>> selectors = new HashMap<>();
+        for (Entry<Bean<? extends T>, Supplier<T>> instance : instances.entrySet()) {
             Feature feature = feature(instance.getKey()).orElseThrow();
-            ContextualSelector selector;
+            ContextualSelector<?> selector;
             if (feature.remaining()) {
                 selector = null;
             } else if (hasDefinedSelector(feature)) {
@@ -172,17 +192,19 @@ public class FeaturesExtension implements Extension {
                 if (beans.isEmpty()) {
                     selector = createInstance(feature.selector());
                 } else {
-                    selector = (ContextualSelector) beanManager.getReference(beanManager.resolve(beans),
-                            ContextualSelector.class, ctx);
+                    selector = (ContextualSelector<?>) beanManager.getReference(beanManager.resolve(beans),
+                            GENERIC_CONTEXTUAL_SELECTOR_TYPE, ctx);
                 }
             } else if (isDefined(feature.propertyKey())) {
-                selector = (ContextualSelector) beanManager.getReference(
+                selector = (ContextualSelector<?>) beanManager.getReference(
                         beanManager.resolve(beanManager.getBeans(ConfigurationSelector.class)),
                         ContextualSelector.class, ctx);
             } else {
                 selector = (Selector) instance.getValue().get();
             }
-            selectors.put(instance.getKey(), selector);
+            @SuppressWarnings("unchecked") // is checked in the validate method
+            ContextualSelector<? super T> contextualSelector = (ContextualSelector<? super T>) selector;
+            selectors.put(instance.getKey(), contextualSelector);
         }
         return selectors;
     }

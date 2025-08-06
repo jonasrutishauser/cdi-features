@@ -7,6 +7,7 @@ import static jakarta.interceptor.Interceptor.Priority.LIBRARY_BEFORE;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -46,6 +47,7 @@ import jakarta.enterprise.inject.spi.CDI;
 import jakarta.enterprise.inject.spi.EventContext;
 import jakarta.enterprise.lang.model.AnnotationInfo;
 import jakarta.enterprise.lang.model.declarations.ClassInfo;
+import jakarta.enterprise.lang.model.types.ClassType;
 import jakarta.enterprise.lang.model.types.Type;
 
 @SkipIfPortableExtensionPresent(FeaturesExtension.class)
@@ -169,6 +171,7 @@ public class FeaturesBuildCompatibleExtension implements BuildCompatibleExtensio
             if (isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString())) {
                 messages.error(FEATURE_PROPERTY_KEY_MEMBER + " must not be set if selector is set", bean);
             }
+            validateSelectorType(feature.member("selector").asType().asClass(), bean, types, messages);
         } else if (isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString()) && !mpConfigAvailable) {
             messages.error(
                     "as MicroProfile Config is not available, " + FEATURE_PROPERTY_KEY_MEMBER + " must not be set",
@@ -182,6 +185,48 @@ public class FeaturesBuildCompatibleExtension implements BuildCompatibleExtensio
         if (isDefined(feature.member("propertyValue").asString())
                 && !isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString())) {
             messages.warn("propertyValue must not be set if " + FEATURE_PROPERTY_KEY_MEMBER + " is not set", bean);
+        }
+    }
+
+    private void validateSelectorType(ClassType selector, BeanInfo bean, Types types, Messages messages) {
+        Type acceptedType = getParametrizedTypeArguments(selector, types.of(ContextualSelector.class), Map.of()).get(0);
+        if (!bean.types().contains(acceptedType)) {
+            messages.error("selector type " + selector.declaration().name() + " accepts beans with type " + acceptedType
+                    + ", which is not a type of the bean", bean);
+        }
+    }
+
+    private List<Type> getParametrizedTypeArguments(ClassInfo type, Type searchType, Map<String, Type> typeVariables) {
+        for (Type iface : type.superInterfaces()) {
+            List<Type> arguments = getParametrizedTypeArguments(iface, searchType, typeVariables);
+            if (arguments != null) {
+                return arguments;
+            }
+        }
+        if (type.superClass() != null) {
+            return getParametrizedTypeArguments(type.superClass(), searchType, typeVariables);
+        }
+        return null;
+    }
+
+    private List<Type> getParametrizedTypeArguments(Type type, Type searchType, Map<String, Type> typeVariables) {
+        if (type.isParameterizedType()) {
+            jakarta.enterprise.lang.model.types.ParameterizedType parameterized = type.asParameterizedType();
+            if (searchType.equals(parameterized.genericClass())) {
+                return parameterized.typeArguments().stream() //
+                        .map(t -> t.isTypeVariable() ? typeVariables.get(t.asTypeVariable().name()) : t) //
+                        .toList();
+            }
+            Map<String, Type> typeVariablesOfInterface = new HashMap<>(typeVariables);
+            for (int i = 0; i < parameterized.typeArguments().size(); i++) {
+                Type typeArgument = parameterized.typeArguments().get(i);
+                typeVariablesOfInterface.put(parameterized.declaration().typeParameters().get(i).name(),
+                        typeArgument.isTypeVariable() ? typeVariables.get(typeArgument.asTypeVariable().name())
+                                : typeArgument);
+            }
+            return getParametrizedTypeArguments(parameterized.declaration(), searchType, typeVariablesOfInterface);
+        } else {
+            return getParametrizedTypeArguments(type.asClass().declaration(), searchType, typeVariables);
         }
     }
 

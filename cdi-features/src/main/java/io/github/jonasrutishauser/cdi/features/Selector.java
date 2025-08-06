@@ -1,10 +1,10 @@
 package io.github.jonasrutishauser.cdi.features;
 
-public interface Selector extends ContextualSelector {
+public interface Selector extends ContextualSelector<Object> {
     boolean selected();
 
     @Override
-    default boolean selected(Context context) {
+    default boolean selected(Context<?> context) {
         return selected();
     }
 }

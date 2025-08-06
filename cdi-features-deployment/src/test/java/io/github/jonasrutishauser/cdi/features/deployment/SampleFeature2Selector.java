@@ -8,7 +8,7 @@ import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 
 @Dependent
-class SampleFeature2Selector implements ContextualSelector {
+class SampleFeature2Selector implements ContextualSelector<SampleFeature2> {
     private final Config config;
 
     @Inject
@@ -17,8 +17,8 @@ class SampleFeature2Selector implements ContextualSelector {
     }
 
     @Override
-    public boolean selected(Context context) {
-        assertEquals("SampleFeature2", context.bean().getBeanClass().getSimpleName());
+    public boolean selected(Context<? extends SampleFeature2> context) {
+        assertEquals("SampleFeature2", context.instance().test());
         return config.getSelected() == 2;
     }
 

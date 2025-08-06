@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -20,6 +22,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import io.github.jonasrutishauser.cdi.features.ContextualSelector;
 import io.github.jonasrutishauser.cdi.features.Feature;
 import io.github.jonasrutishauser.cdi.features.Selector;
 import io.smallrye.config.inject.ConfigExtension;
@@ -89,7 +92,9 @@ class ExtensionIT {
                 arguments(named("selector and propertyKey is set", SelectorAndPropertyKey.class),
                         "propertyKey must not be set if selector is set"), //
                 arguments(named("not implementing selector", NotImplementingSelector.class),
-                        " must implement io.github.jonasrutishauser.cdi.features.Selector if no other selector is defined") //
+                        " must implement io.github.jonasrutishauser.cdi.features.Selector if no other selector is defined"), //
+                arguments(named("wrong types on ContextualSelector", WithWrongSelector.class),
+                        "selector type io.github.jonasrutishauser.cdi.features.impl.ExtensionIT$WrongSelector accepts beans with type java.util.List<java.lang.String>, which is not a type of the bean") //
         );
     }
 
@@ -113,12 +118,12 @@ class ExtensionIT {
     static Stream<Arguments> cachePropertyvalidation() {
         return Stream.of( //
                 arguments(named("on class", CacheWithPropertyOnClass.class)), //
-                arguments(named("on fieald", CacheWithPropertyOnField.class)), //
+                arguments(named("on field", CacheWithPropertyOnField.class)), //
                 arguments(named("on method", CacheWithPropertyOnMethod.class)) //
         ).flatMap(args -> extensions().map(ex -> arguments(ex.get()[0], ex.get()[1], args.get()[0])));
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest(name = "{2} - {0}")
     @MethodSource("cachePropertyvalidation")
     void validateCacheProperty(Extension extension, Class<? extends RuntimeException> exceptionType,
             Class<?> beanClass) {
@@ -238,5 +243,21 @@ class ExtensionIT {
             return new WithPropertyKeyOnClass();
         }
     }
+
+    @Feature(selector = WrongSelector.class)
+    static class WithWrongSelector {}
+
+    static class WrongSelector extends WrongSelectorSuper<Object, List<String>> implements Serializable {
+        private static final long serialVersionUID = 1L;
+    }
+
+    static class WrongSelectorSuper<S, T extends List<? extends CharSequence>> implements WrongSelectorInterface<T> {
+        @Override
+        public boolean selected(Context<? extends T> context) {
+            return false;
+        }
+    }
+
+    static interface WrongSelectorInterface<S> extends ContextualSelector<S> {}
 
 }

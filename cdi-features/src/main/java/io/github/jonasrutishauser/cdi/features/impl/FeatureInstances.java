@@ -19,10 +19,10 @@ import jakarta.enterprise.inject.spi.BeanAttributes;
 
 class FeatureInstances<T> {
     private final Map<Bean<? extends T>, Supplier<T>> instances;
-    private final Map<Bean<? extends T>, ContextualSelector> selectors;
+    private final Map<Bean<? extends T>, ContextualSelector<? super T>> selectors;
     private final Cache cache;
 
-    public FeatureInstances(Map<Bean<? extends T>, Supplier<T>> instances, Map<Bean<? extends T>, ContextualSelector> selectors,
+    public FeatureInstances(Map<Bean<? extends T>, Supplier<T>> instances, Map<Bean<? extends T>, ContextualSelector<? super T>> selectors,
             Cache cache) {
         this.instances = instances;
         this.selectors = selectors;
@@ -46,8 +46,8 @@ class FeatureInstances<T> {
         return !value.isEmpty();
     }
 
-    private Selection isSelected(Bean<?> bean) {
-        ContextualSelector selector = selectors.get(bean);
+    private Selection isSelected(Bean<? extends T> bean) {
+        ContextualSelector<? super T> selector = selectors.get(bean);
         try {
             if (selector == null) {
                 return Selection.REMAINING;
@@ -55,14 +55,14 @@ class FeatureInstances<T> {
             if (selector instanceof Selector s) {
                 return Selection.of(s.selected());
             }
-            return Selection.of(selector.selected(new Context() {
+            return Selection.of(selector.selected(new Context<T>() {
                 @Override
-                public Bean<?> bean() {
+                public Bean<? extends T> bean() {
                     return bean;
                 }
 
                 @Override
-                public Object instance() {
+                public T instance() {
                     return instances.get(bean).get();
                 }
             }));

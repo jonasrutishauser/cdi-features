@@ -19,7 +19,7 @@ public @interface Feature {
      *         (needs a public no-arg constructor otherwise).
      */
     @Nonbinding
-    Class<? extends ContextualSelector> selector() default Selector.class;
+    Class<? extends ContextualSelector<?>> selector() default Selector.class;
 
     /**
      * @return property key used for the selection. This requires that MicroProfile

@@ -172,7 +172,7 @@ public abstract class AbstractIT {
     }
 
     @Dependent
-    static class SampleFeature2Selector implements ContextualSelector {
+    static class SampleFeature2Selector implements ContextualSelector<SampleFeature2> {
         private final Config config;
 
         @Inject
@@ -181,8 +181,8 @@ public abstract class AbstractIT {
         }
 
         @Override
-        public boolean selected(Context context) {
-            assertEquals("SampleFeature2", context.bean().getBeanClass().getSimpleName());
+        public boolean selected(Context<? extends SampleFeature2> context) {
+            assertEquals("SampleFeature2", context.instance().test());
             return config.getSelected() == 2;
         }
 
