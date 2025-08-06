@@ -46,7 +46,7 @@ class FeatureInstances<T> {
         return !value.isEmpty();
     }
 
-    private Selection isSelected(Bean<? extends T> bean) {
+    private Selection isSelected(Bean<?> bean) {
         ContextualSelector<? super T> selector = selectors.get(bean);
         try {
             if (selector == null) {
@@ -57,8 +57,9 @@ class FeatureInstances<T> {
             }
             return Selection.of(selector.selected(new Context<T>() {
                 @Override
+                @SuppressWarnings("unchecked")
                 public Bean<? extends T> bean() {
-                    return bean;
+                    return (Bean<? extends T>) bean;
                 }
 
                 @Override

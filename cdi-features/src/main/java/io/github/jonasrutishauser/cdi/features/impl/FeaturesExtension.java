@@ -160,8 +160,10 @@ public class FeaturesExtension implements Extension {
     private <T> T createDummy(BeanManager beanManager, Type type, CreationalContext<Object> ctx,
             Set<Bean<? extends T>> features) {
         Map<Bean<? extends T>, Supplier<T>> instances = getFeatureInstances(beanManager, type, ctx, features);
-        context.setInstances(beanManager.resolve(beanManager.getBeans(type)),
-                new FeatureInstances<>(instances, getSelectors(beanManager, ctx, instances), getCache(beanManager, ctx)));
+        @SuppressWarnings("unchecked")
+        Bean<T> ownBean = (Bean<T>) beanManager.resolve(beanManager.getBeans(type));
+        context.setInstances(ownBean, new FeatureInstances<>(instances, getSelectors(beanManager, ctx, instances),
+                getCache(beanManager, ctx)));
         return instances.values().iterator().next().get();
     }
 
