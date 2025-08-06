@@ -30,7 +30,7 @@ class FeatureInstances<T> {
     }
 
     public T selected(Contextual<T> contextual) {
-        return instances.get((Bean<?>) cache.compute(contextual, selectors.keySet(), this::isSelected,
+        return instances.get(cache.compute(contextual, selectors.keySet(), this::isSelected,
                 bean -> cacheDurationInMillis(contextual, bean))).get();
     }
 

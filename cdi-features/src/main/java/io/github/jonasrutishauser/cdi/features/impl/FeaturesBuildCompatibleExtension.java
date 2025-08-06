@@ -199,14 +199,14 @@ public class FeaturesBuildCompatibleExtension implements BuildCompatibleExtensio
     private List<Type> getParametrizedTypeArguments(ClassInfo type, Type searchType, Map<String, Type> typeVariables) {
         for (Type iface : type.superInterfaces()) {
             List<Type> arguments = getParametrizedTypeArguments(iface, searchType, typeVariables);
-            if (arguments != null) {
+            if (!arguments.isEmpty()) {
                 return arguments;
             }
         }
         if (type.superClass() != null) {
             return getParametrizedTypeArguments(type.superClass(), searchType, typeVariables);
         }
-        return null;
+        return List.of();
     }
 
     private List<Type> getParametrizedTypeArguments(Type type, Type searchType, Map<String, Type> typeVariables) {
