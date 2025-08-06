@@ -9,6 +9,8 @@
 
 	<artifactId>cdi-features-deployment</artifactId>
 
+	<name>CDI Features Quarkus Extension</name>
+
 	<dependencies>
 		<dependency>
 			<groupId>${project.groupId}</groupId>

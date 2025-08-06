@@ -9,6 +9,8 @@
 
 	<artifactId>cdi-features</artifactId>
 
+	<name>CDI Features</name>
+
 	<dependencies>
 		<dependency>
 			<groupId>jakarta.enterprise</groupId>

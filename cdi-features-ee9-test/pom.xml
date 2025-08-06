@@ -9,6 +9,8 @@
 
 	<artifactId>cdi-features-ee9-test</artifactId>
 
+	<name>CDI Features EE9 Tests</name>
+
 	<properties>
 		<maven.deploy.skip>true</maven.deploy.skip>
 	</properties>
