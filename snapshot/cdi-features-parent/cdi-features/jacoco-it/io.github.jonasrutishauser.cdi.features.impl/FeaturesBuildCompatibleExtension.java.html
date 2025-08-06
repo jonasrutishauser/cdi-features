@@ -199,14 +199,14 @@ import jakarta.enterprise.lang.model.types.Type;
     private List&lt;Type&gt; getParametrizedTypeArguments(ClassInfo type, Type searchType, Map&lt;String, Type&gt; typeVariables) {
 <span class="fc bfc" id="L200" title="All 2 branches covered.">        for (Type iface : type.superInterfaces()) {</span>
 <span class="fc" id="L201">            List&lt;Type&gt; arguments = getParametrizedTypeArguments(iface, searchType, typeVariables);</span>
-<span class="fc bfc" id="L202" title="All 2 branches covered.">            if (arguments != null) {</span>
+<span class="fc bfc" id="L202" title="All 2 branches covered.">            if (!arguments.isEmpty()) {</span>
 <span class="fc" id="L203">                return arguments;</span>
             }
 <span class="fc" id="L205">        }</span>
 <span class="fc bfc" id="L206" title="All 2 branches covered.">        if (type.superClass() != null) {</span>
 <span class="fc" id="L207">            return getParametrizedTypeArguments(type.superClass(), searchType, typeVariables);</span>
         }
-<span class="fc" id="L209">        return null;</span>
+<span class="fc" id="L209">        return List.of();</span>
     }
 
     private List&lt;Type&gt; getParametrizedTypeArguments(Type type, Type searchType, Map&lt;String, Type&gt; typeVariables) {

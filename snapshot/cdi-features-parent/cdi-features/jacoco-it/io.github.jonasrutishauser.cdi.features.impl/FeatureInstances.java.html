@@ -30,7 +30,7 @@ class FeatureInstances&lt;T&gt; {
 <span class="fc" id="L30">    }</span>
 
     public T selected(Contextual&lt;T&gt; contextual) {
-<span class="fc" id="L33">        return instances.get((Bean&lt;?&gt;) cache.compute(contextual, selectors.keySet(), this::isSelected,</span>
+<span class="fc" id="L33">        return instances.get(cache.compute(contextual, selectors.keySet(), this::isSelected,</span>
 <span class="fc" id="L34">                bean -&gt; cacheDurationInMillis(contextual, bean))).get();</span>
     }
 

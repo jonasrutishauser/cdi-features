@@ -38,14 +38,14 @@ import jakarta.enterprise.inject.spi.BeanManager;
     static &lt;T&gt; T create(Bean&lt;T&gt; ownBean, Stream&lt;? extends Handle&lt;? extends T&gt;&gt; instancesStream, Lookup lookup) {
 <span class="fc" id="L39">        Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances = instancesStream</span>
 <span class="fc" id="L40">                .collect(Collectors.toMap(Handle::getBean, handle -&gt; handle::get));</span>
-<span class="fc" id="L41">        Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; selectors = getSelectors(ownBean, lookup, instances);</span>
+<span class="fc" id="L41">        Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; selectors = getSelectors(lookup, instances);</span>
 <span class="fc" id="L42">        FeatureContext context = (FeatureContext) lookup.getReference(BeanManager.class)</span>
 <span class="fc" id="L43">                .getContext(FeatureScoped.class);</span>
 <span class="fc" id="L44">        context.setInstances(ownBean, new FeatureInstances&lt;&gt;(instances, selectors, lookup.getReference(Cache.class)));</span>
 <span class="fc" id="L45">        return instances.values().iterator().next().get();</span>
     }
 
-    private static &lt;T&gt; Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; getSelectors(Bean&lt;T&gt; ownBean, Lookup lookup,
+    private static &lt;T&gt; Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; getSelectors(Lookup lookup,
             Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances) {
 <span class="fc" id="L50">        Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; selectors = new HashMap&lt;&gt;();</span>
 <span class="fc bfc" id="L51" title="All 2 branches covered.">        for (Entry&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instance : instances.entrySet()) {</span>
