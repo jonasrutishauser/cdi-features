@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FeaturesBuildCompatibleExtension.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CDI Features</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features.impl</a> &gt; <span class="el_source">FeaturesBuildCompatibleExtension.java</span></div><h1>FeaturesBuildCompatibleExtension.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features.impl;
+
+import static io.github.jonasrutishauser.cdi.features.impl.FeatureInstances.isDefined;
+import static jakarta.interceptor.Interceptor.Priority.LIBRARY_AFTER;
+import static jakarta.interceptor.Interceptor.Priority.LIBRARY_BEFORE;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+
+import io.github.jonasrutishauser.cdi.features.ContextualSelector;
+import io.github.jonasrutishauser.cdi.features.Feature;
+import io.github.jonasrutishauser.cdi.features.Selector;
+import io.github.jonasrutishauser.cdi.features.ThrowableSelector;
+import jakarta.annotation.Priority;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Shutdown;
+import jakarta.enterprise.inject.Any;
+import jakarta.enterprise.inject.Default;
+import jakarta.enterprise.inject.Produces;
+import jakarta.enterprise.inject.build.compatible.spi.AnnotationBuilder;
+import jakarta.enterprise.inject.build.compatible.spi.BeanInfo;
+import jakarta.enterprise.inject.build.compatible.spi.BuildCompatibleExtension;
+import jakarta.enterprise.inject.build.compatible.spi.ClassConfig;
+import jakarta.enterprise.inject.build.compatible.spi.DeclarationConfig;
+import jakarta.enterprise.inject.build.compatible.spi.Discovery;
+import jakarta.enterprise.inject.build.compatible.spi.Enhancement;
+import jakarta.enterprise.inject.build.compatible.spi.FieldConfig;
+import jakarta.enterprise.inject.build.compatible.spi.Messages;
+import jakarta.enterprise.inject.build.compatible.spi.MetaAnnotations;
+import jakarta.enterprise.inject.build.compatible.spi.MethodConfig;
+import jakarta.enterprise.inject.build.compatible.spi.Parameters;
+import jakarta.enterprise.inject.build.compatible.spi.Registration;
+import jakarta.enterprise.inject.build.compatible.spi.ScannedClasses;
+import jakarta.enterprise.inject.build.compatible.spi.SkipIfPortableExtensionPresent;
+import jakarta.enterprise.inject.build.compatible.spi.Synthesis;
+import jakarta.enterprise.inject.build.compatible.spi.SyntheticBeanBuilder;
+import jakarta.enterprise.inject.build.compatible.spi.SyntheticComponents;
+import jakarta.enterprise.inject.build.compatible.spi.SyntheticObserver;
+import jakarta.enterprise.inject.build.compatible.spi.Types;
+import jakarta.enterprise.inject.spi.CDI;
+import jakarta.enterprise.inject.spi.EventContext;
+import jakarta.enterprise.lang.model.AnnotationInfo;
+import jakarta.enterprise.lang.model.declarations.ClassInfo;
+import jakarta.enterprise.lang.model.types.ClassType;
+import jakarta.enterprise.lang.model.types.Type;
+
+@SkipIfPortableExtensionPresent(FeaturesExtension.class)
+<span class="fc" id="L54">public class FeaturesBuildCompatibleExtension implements BuildCompatibleExtension {</span>
+
+    private static final String FEATURE_PROPERTY_KEY_MEMBER = &quot;propertyKey&quot;;
+
+    private boolean quarkusDeployment;
+
+    private boolean mpConfigAvailable;
+
+<span class="fc" id="L62">    private long currentIdentifier = Long.MIN_VALUE;</span>
+
+<span class="fc" id="L64">    private final Set&lt;BeanInfo&gt; featureBeans = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L65">    private final Set&lt;Type&gt; typesWithDefaultScopedBeans = new HashSet&lt;&gt;();</span>
+
+    @Discovery
+    @Priority(LIBRARY_BEFORE + 500)
+    public void registerScope(MetaAnnotations metaAnnotations) {
+<span class="fc" id="L70">        metaAnnotations.addContext(FeatureScoped.class, true, FeatureContext.class);</span>
+<span class="fc" id="L71">    }</span>
+
+    @Discovery
+    public void registerTypes(ScannedClasses scannedClasses) {
+<span class="fc" id="L75">        scannedClasses.add(Cache.class.getName());</span>
+        try {
+<span class="fc" id="L77">            Class.forName(&quot;org.eclipse.microprofile.config.Config&quot;, false, getClass().getClassLoader());</span>
+<span class="fc" id="L78">            scannedClasses.add(ConfigurationSelector.class.getName());</span>
+<span class="fc" id="L79">            mpConfigAvailable = true;</span>
+<span class="fc" id="L80">        } catch (ClassNotFoundException e) {</span>
+            // ignore
+<span class="fc" id="L82">        }</span>
+<span class="fc" id="L83">    }</span>
+
+    @Priority(LIBRARY_BEFORE + 500)
+    @Enhancement(types = Cache.class)
+    public void setScopeOfCache(ClassConfig classConfig) {
+<span class="fc" id="L88">        classConfig.addAnnotation(ApplicationScoped.class);</span>
+<span class="fc" id="L89">    }</span>
+
+    @Priority(LIBRARY_AFTER + 900)
+    @Enhancement(types = Object.class, withSubtypes = true, withAnnotations = Feature.class)
+    public void addIdentifierAndCleanupCacheDurationProperty(ClassConfig classConfig, Messages messages) {
+<span class="fc" id="L94">        addIdentifierAndCleanupCacheDurationProperty(classConfig, false, messages);</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">        for (MethodConfig method : classConfig.methods()) {</span>
+<span class="fc" id="L96">            addIdentifierAndCleanupCacheDurationProperty(method, true, messages);</span>
+<span class="fc" id="L97">        }</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        for (FieldConfig field : classConfig.fields()) {</span>
+<span class="fc" id="L99">            addIdentifierAndCleanupCacheDurationProperty(field, true, messages);</span>
+<span class="fc" id="L100">        }</span>
+<span class="fc" id="L101">    }</span>
+
+    private void addIdentifierAndCleanupCacheDurationProperty(DeclarationConfig declaration, boolean needsProduces,
+            Messages messages) {
+<span class="fc" id="L105">        AnnotationInfo feature = declaration.info().annotation(Feature.class);</span>
+<span class="pc bpc" id="L106" title="1 of 6 branches missed.">        if (feature != null &amp;&amp; (!needsProduces || declaration.info().hasAnnotation(Produces.class))) {</span>
+<span class="fc" id="L107">            declaration.addAnnotation(AnnotationBuilder.of(Identified.class).value(currentIdentifier++).build());</span>
+<span class="fc bfc" id="L108" title="All 4 branches covered.">            if (!mpConfigAvailable &amp;&amp; cacheDurationMillisPropertyIsDefined(feature)) {</span>
+<span class="fc" id="L109">                messages.warn(&quot;as MicroProfile Config is not available, cache durationMillisProperty will be ignored&quot;,</span>
+<span class="fc" id="L110">                        declaration.info());</span>
+<span class="fc" id="L111">                declaration.removeAnnotation(a -&gt; Feature.class.getName().equals(a.name())) //</span>
+<span class="fc" id="L112">                        .addAnnotation(copyFeatureWithoutCacheDurationMillisProperty(feature));</span>
+            }
+        }
+<span class="fc" id="L115">    }</span>
+
+    private boolean cacheDurationMillisPropertyIsDefined(AnnotationInfo feature) {
+<span class="fc" id="L118">        return isDefined(feature.member(&quot;cache&quot;).asNestedAnnotation().member(&quot;durationMillisProperty&quot;).asString());</span>
+    }
+
+    private AnnotationInfo copyFeatureWithoutCacheDurationMillisProperty(AnnotationInfo feature) {
+<span class="fc" id="L122">        AnnotationBuilder builder = AnnotationBuilder.of(Feature.class);</span>
+<span class="fc" id="L123">        feature.members().forEach((key, value) -&gt; {</span>
+<span class="fc bfc" id="L124" title="All 2 branches covered.">            if (key.equals(&quot;cache&quot;)) {</span>
+<span class="fc" id="L125">                builder.member(key, copyCacheWithoutDurationMillisProperty(value.asNestedAnnotation()));</span>
+            } else {
+<span class="fc" id="L127">                builder.member(key, value);</span>
+            }
+<span class="fc" id="L129">        });</span>
+<span class="fc" id="L130">        return builder.build();</span>
+    }
+
+    private AnnotationInfo copyCacheWithoutDurationMillisProperty(AnnotationInfo cache) {
+<span class="fc" id="L134">        AnnotationBuilder builder = AnnotationBuilder.of(Feature.Cache.class);</span>
+<span class="fc" id="L135">        cache.members().forEach((key, value) -&gt; {</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">            if (!key.equals(&quot;durationMillisProperty&quot;)) {</span>
+<span class="fc" id="L137">                builder.member(key, value);</span>
+            }
+<span class="fc" id="L139">        });</span>
+<span class="fc" id="L140">        return builder.build();</span>
+    }
+
+    @Registration(types = Cache.class)
+    public void discoverQuarkusDeployment(BeanInfo bean) {
+<span class="fc bfc" id="L145" title="All 2 branches covered.">        if (bean.qualifiers().stream().anyMatch(a -&gt; Identified.class.getName().equals(a.name()))) {</span>
+<span class="fc" id="L146">            quarkusDeployment = true;</span>
+        }
+<span class="fc" id="L148">    }</span>
+
+    @Registration(types = Object.class)
+    public void discoverFeatures(BeanInfo bean, Types types, Messages messages) {
+<span class="fc bfc" id="L152" title="All 2 branches covered.">        if (bean.qualifiers().stream().anyMatch(a -&gt; Default.class.getName().equals(a.name()))) {</span>
+<span class="fc" id="L153">            typesWithDefaultScopedBeans.addAll(bean.types());</span>
+        }
+<span class="fc" id="L155">        Optional&lt;AnnotationInfo&gt; feature = bean.qualifiers().stream().filter(a -&gt; Feature.class.getName().equals(a.name())).findAny();</span>
+<span class="fc bfc" id="L156" title="All 2 branches covered.">        if (feature.isPresent()) {</span>
+<span class="fc" id="L157">            validate(feature.get(), bean, types, messages);</span>
+<span class="fc" id="L158">            featureBeans.add(bean);</span>
+        }
+<span class="fc" id="L160">    }</span>
+
+    private void validate(AnnotationInfo feature, BeanInfo bean, Types types, Messages messages) {
+<span class="fc bfc" id="L163" title="All 2 branches covered.">        if (feature.member(&quot;remaining&quot;).asBoolean()) {</span>
+<span class="fc bfc" id="L164" title="All 2 branches covered.">            if (hasDefinedSelector(feature, types)) {</span>
+<span class="fc" id="L165">                messages.error(&quot;selector must not be set if remaining is true&quot;, bean);</span>
+            }
+<span class="fc bfc" id="L167" title="All 2 branches covered.">            if (isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString())) {</span>
+<span class="fc" id="L168">                messages.error(FEATURE_PROPERTY_KEY_MEMBER + &quot; must not be set if remaining is true&quot;, bean);</span>
+            }
+<span class="fc bfc" id="L170" title="All 2 branches covered.">        } else if (hasDefinedSelector(feature, types)) {</span>
+<span class="fc bfc" id="L171" title="All 2 branches covered.">            if (isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString())) {</span>
+<span class="fc" id="L172">                messages.error(FEATURE_PROPERTY_KEY_MEMBER + &quot; must not be set if selector is set&quot;, bean);</span>
+            }
+<span class="fc" id="L174">            validateSelectorType(feature.member(&quot;selector&quot;).asType().asClass(), bean, types, messages);</span>
+<span class="fc bfc" id="L175" title="All 4 branches covered.">        } else if (isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString()) &amp;&amp; !mpConfigAvailable) {</span>
+<span class="fc" id="L176">            messages.error(</span>
+                    &quot;as MicroProfile Config is not available, &quot; + FEATURE_PROPERTY_KEY_MEMBER + &quot; must not be set&quot;,
+                    bean);
+<span class="fc bfc" id="L179" title="All 2 branches covered.">        } else if (!isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString())</span>
+<span class="fc bfc" id="L180" title="All 2 branches covered.">                &amp;&amp; !bean.types().contains(types.of(Selector.class))) {</span>
+<span class="fc" id="L181">                    messages.error(</span>
+<span class="fc" id="L182">                            &quot;bean must implement &quot; + Selector.class.getName() + &quot; if no other selector is defined&quot;,</span>
+                            bean);
+                }
+<span class="fc bfc" id="L185" title="All 2 branches covered.">        if (isDefined(feature.member(&quot;propertyValue&quot;).asString())</span>
+<span class="fc bfc" id="L186" title="All 2 branches covered.">                &amp;&amp; !isDefined(feature.member(FEATURE_PROPERTY_KEY_MEMBER).asString())) {</span>
+<span class="fc" id="L187">            messages.warn(&quot;propertyValue must not be set if &quot; + FEATURE_PROPERTY_KEY_MEMBER + &quot; is not set&quot;, bean);</span>
+        }
+<span class="fc" id="L189">    }</span>
+
+    private void validateSelectorType(ClassType selector, BeanInfo bean, Types types, Messages messages) {
+<span class="fc" id="L192">        Type acceptedType = getParametrizedTypeArguments(selector, types.of(ContextualSelector.class), Map.of()).get(0);</span>
+<span class="fc bfc" id="L193" title="All 2 branches covered.">        if (!bean.types().contains(acceptedType)) {</span>
+<span class="fc" id="L194">            messages.error(&quot;selector type &quot; + selector.declaration().name() + &quot; accepts beans with type &quot; + acceptedType</span>
+                    + &quot;, which is not a type of the bean&quot;, bean);
+        }
+<span class="fc" id="L197">    }</span>
+
+    private List&lt;Type&gt; getParametrizedTypeArguments(ClassInfo type, Type searchType, Map&lt;String, Type&gt; typeVariables) {
+<span class="fc bfc" id="L200" title="All 2 branches covered.">        for (Type iface : type.superInterfaces()) {</span>
+<span class="fc" id="L201">            List&lt;Type&gt; arguments = getParametrizedTypeArguments(iface, searchType, typeVariables);</span>
+<span class="fc bfc" id="L202" title="All 2 branches covered.">            if (!arguments.isEmpty()) {</span>
+<span class="fc" id="L203">                return arguments;</span>
+            }
+<span class="fc" id="L205">        }</span>
+<span class="fc bfc" id="L206" title="All 2 branches covered.">        if (type.superClass() != null) {</span>
+<span class="fc" id="L207">            return getParametrizedTypeArguments(type.superClass(), searchType, typeVariables);</span>
+        }
+<span class="fc" id="L209">        return List.of();</span>
+    }
+
+    private List&lt;Type&gt; getParametrizedTypeArguments(Type type, Type searchType, Map&lt;String, Type&gt; typeVariables) {
+<span class="fc bfc" id="L213" title="All 2 branches covered.">        if (type.isParameterizedType()) {</span>
+<span class="fc" id="L214">            jakarta.enterprise.lang.model.types.ParameterizedType parameterized = type.asParameterizedType();</span>
+<span class="fc bfc" id="L215" title="All 2 branches covered.">            if (searchType.equals(parameterized.genericClass())) {</span>
+<span class="fc" id="L216">                return parameterized.typeArguments().stream() //</span>
+<span class="fc bfc" id="L217" title="All 2 branches covered.">                        .map(t -&gt; t.isTypeVariable() ? typeVariables.get(t.asTypeVariable().name()) : t) //</span>
+<span class="fc" id="L218">                        .toList();</span>
+            }
+<span class="fc" id="L220">            Map&lt;String, Type&gt; typeVariablesOfInterface = new HashMap&lt;&gt;(typeVariables);</span>
+<span class="fc bfc" id="L221" title="All 2 branches covered.">            for (int i = 0; i &lt; parameterized.typeArguments().size(); i++) {</span>
+<span class="fc" id="L222">                Type typeArgument = parameterized.typeArguments().get(i);</span>
+<span class="fc" id="L223">                typeVariablesOfInterface.put(parameterized.declaration().typeParameters().get(i).name(),</span>
+<span class="fc bfc" id="L224" title="All 2 branches covered.">                        typeArgument.isTypeVariable() ? typeVariables.get(typeArgument.asTypeVariable().name())</span>
+<span class="fc" id="L225">                                : typeArgument);</span>
+            }
+<span class="fc" id="L227">            return getParametrizedTypeArguments(parameterized.declaration(), searchType, typeVariablesOfInterface);</span>
+        } else {
+<span class="fc" id="L229">            return getParametrizedTypeArguments(type.asClass().declaration(), searchType, typeVariables);</span>
+        }
+    }
+
+    private static boolean hasDefinedSelector(AnnotationInfo feature, Types types) {
+<span class="fc bfc" id="L234" title="All 2 branches covered.">        return !types.of(Selector.class).equals(feature.member(&quot;selector&quot;).asType());</span>
+    }
+
+    @Synthesis
+    @Priority(LIBRARY_AFTER + 500)
+    public void registerFeatureSelectorBeans(SyntheticComponents components, Types types) {
+<span class="fc bfc" id="L240" title="All 2 branches covered.">        for (Entry&lt;Type, Set&lt;BeanInfo&gt;&gt; feature : getFeatures(types).entrySet()) {</span>
+<span class="fc" id="L241">            AnnotationInfo identifier = AnnotationBuilder.of(Identified.class).value(currentIdentifier++).build();</span>
+            @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L243">            SyntheticBeanBuilder&lt;Object&gt; beanBuilder = (SyntheticBeanBuilder&lt;Object&gt;) components.addBean(toClass(feature.getKey()));</span>
+<span class="fc bfc" id="L244" title="All 2 branches covered.">            beanBuilder.qualifier(quarkusDeployment ? Any.class : Default.class) //</span>
+<span class="fc" id="L245">                    .qualifier(identifier) //</span>
+<span class="fc" id="L246">                    .type(feature.getKey()) //</span>
+<span class="fc" id="L247">                    .scope(FeatureScoped.class) //</span>
+<span class="fc" id="L248">                    .createWith(FeatureCreator.class) //</span>
+<span class="fc" id="L249">                    .withParam(FeatureCreator.IDENTIFIER, identifier) //</span>
+<span class="fc" id="L250">                    .withParam(FeatureCreator.BEANS_IDENTIFIER, getIdentifiers(feature.getValue()));</span>
+<span class="fc" id="L251">        }</span>
+<span class="fc" id="L252">    }</span>
+
+    private AnnotationInfo[] getIdentifiers(Set&lt;BeanInfo&gt; beans) {
+<span class="fc" id="L255">        return beans.stream() //</span>
+<span class="fc" id="L256">                .map(BeanInfo::qualifiers) //</span>
+<span class="fc" id="L257">                .map(this::getIdentifier) //</span>
+<span class="fc" id="L258">                .toArray(AnnotationInfo[]::new);</span>
+    }
+
+    private AnnotationInfo getIdentifier(Collection&lt;AnnotationInfo&gt; qualifiers) {
+<span class="fc" id="L262">        return qualifiers.stream().filter(a -&gt; Identified.class.getName().equals(a.name())).findAny().orElseThrow();</span>
+    }
+
+    private Map&lt;Type, Set&lt;BeanInfo&gt;&gt; getFeatures(Types types) {
+<span class="fc" id="L266">        Map&lt;Type, Set&lt;BeanInfo&gt;&gt; features = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L267">        Set&lt;Type&gt; excludedTypes = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L268">        excludedTypes.add(types.of(Object.class));</span>
+<span class="fc" id="L269">        excludedTypes.add(types.of(ContextualSelector.class));</span>
+<span class="fc" id="L270">        excludedTypes.add(types.of(Selector.class));</span>
+<span class="fc" id="L271">        excludedTypes.add(types.of(ThrowableSelector.class));</span>
+<span class="fc bfc" id="L272" title="All 2 branches covered.">        for (BeanInfo featureBean : featureBeans) {</span>
+<span class="fc bfc" id="L273" title="All 2 branches covered.">            for (Type type : featureBean.types()) {</span>
+<span class="fc bfc" id="L274" title="All 4 branches covered.">                if (!excludedTypes.contains(type) &amp;&amp; !typesWithDefaultScopedBeans.contains(type)) {</span>
+<span class="fc" id="L275">                    features.computeIfAbsent(type, t -&gt; new HashSet&lt;&gt;()).add(featureBean);</span>
+                }
+<span class="fc" id="L277">            }</span>
+<span class="fc" id="L278">        }</span>
+<span class="fc" id="L279">        return features;</span>
+    }
+
+    private Class&lt;?&gt; toClass(Type type) {
+        try {
+<span class="fc" id="L284">            return Class.forName(toClassInfo(type).name(), false, getClass().getClassLoader());</span>
+<span class="nc" id="L285">        } catch (ClassNotFoundException e) {</span>
+<span class="nc" id="L286">            throw new IllegalStateException(&quot;unsupported type &quot; + type, e);</span>
+        }
+    }
+
+    private ClassInfo toClassInfo(Type type) {
+<span class="fc bfc" id="L291" title="All 2 branches covered.">        if (type.isClass()) {</span>
+<span class="fc" id="L292">            return type.asClass().declaration();</span>
+        }
+<span class="pc bpc" id="L294" title="1 of 2 branches missed.">        if (type.isParameterizedType()) {</span>
+<span class="fc" id="L295">            return type.asParameterizedType().genericClass().declaration();</span>
+        }
+<span class="nc" id="L297">        throw new IllegalStateException(&quot;unsupported type &quot; + type);</span>
+    }
+
+    @Synthesis
+    @Priority(LIBRARY_BEFORE + 500)
+    public void registerScopeStop(SyntheticComponents components, Types types) {
+<span class="fc" id="L303">        components.addObserver(Shutdown.class) //</span>
+<span class="fc" id="L304">                .priority(LIBRARY_AFTER + 900) //</span>
+<span class="fc" id="L305">                .observeWith(ScopeStop.class);</span>
+<span class="fc" id="L306">    }</span>
+
+<span class="fc" id="L308">    public static class ScopeStop implements SyntheticObserver&lt;Shutdown&gt; {</span>
+        @Override
+        public void observe(EventContext&lt;Shutdown&gt; event, Parameters params) throws Exception {
+<span class="fc" id="L311">            ((FeatureContext) CDI.current().getBeanManager().getContext(FeatureScoped.class)).stop();</span>
+<span class="fc" id="L312">        }</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

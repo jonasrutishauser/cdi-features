@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FeatureHolder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CDI Features</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features.impl</a> &gt; <span class="el_source">FeatureHolder.java</span></div><h1>FeatureHolder.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features.impl;
+
+import jakarta.enterprise.context.spi.Contextual;
+import jakarta.enterprise.context.spi.CreationalContext;
+
+class FeatureHolder&lt;T&gt; {
+
+    private final Contextual&lt;T&gt; contextual;
+    private final CreationalContext&lt;T&gt; creationalContext;
+
+    private T instance;
+    private FeatureInstances&lt;T&gt; instances;
+
+<span class="fc" id="L14">    public FeatureHolder(Contextual&lt;T&gt; contextual, CreationalContext&lt;T&gt; creationalContext) {</span>
+<span class="fc" id="L15">        this.creationalContext = creationalContext;</span>
+<span class="fc" id="L16">        this.contextual = contextual;</span>
+<span class="fc" id="L17">    }</span>
+
+    public T selected() {
+<span class="fc bfc" id="L20" title="All 2 branches covered.">        if (instance == null) {</span>
+<span class="fc" id="L21">            init();</span>
+        }
+<span class="fc" id="L23">        return instances.selected(contextual);</span>
+    }
+
+    public void setInstances(FeatureInstances&lt;T&gt; features) {
+<span class="fc" id="L27">        this.instances = features;</span>
+<span class="fc" id="L28">    }</span>
+
+    private synchronized void init() {
+<span class="pc bpc" id="L31" title="1 of 2 branches missed.">        if (instance == null) {</span>
+<span class="fc" id="L32">            instance = contextual.create(creationalContext);</span>
+<span class="pc bpc" id="L33" title="1 of 2 branches missed.">            if (instances == null) {</span>
+<span class="nc" id="L34">                throw new IllegalStateException(&quot;featues should have been set from the callback&quot;);</span>
+            }
+        }
+<span class="fc" id="L37">    }</span>
+
+    public void destroy() {
+<span class="pc bpc" id="L40" title="1 of 2 branches missed.">        if (instance != null) {</span>
+<span class="fc" id="L41">            contextual.destroy(instance, creationalContext);</span>
+<span class="fc" id="L42">            instance = null;</span>
+<span class="fc" id="L43">            instances = null;</span>
+        }
+<span class="fc" id="L45">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
