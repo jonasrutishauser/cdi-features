@@ -10,7 +10,7 @@ import io.github.jonasrutishauser.cdi.features.ContextualSelector;
 import io.github.jonasrutishauser.cdi.features.Feature;
 import jakarta.inject.Inject;
 
-class ConfigurationSelector implements ContextualSelector {
+class ConfigurationSelector implements ContextualSelector&lt;Object&gt; {
 
     private final Config config;
 
@@ -20,7 +20,7 @@ class ConfigurationSelector implements ContextualSelector {
 <span class="fc" id="L20">    }</span>
 
     @Override
-    public boolean selected(Context context) {
+    public boolean selected(Context&lt;?&gt; context) {
 <span class="fc" id="L24">        Feature feature = feature(context.bean()).orElseThrow();</span>
 <span class="fc" id="L25">        Optional&lt;String&gt; value = config.getOptionalValue(feature.propertyKey(), String.class);</span>
 <span class="fc" id="L26">        return value.filter(</span>

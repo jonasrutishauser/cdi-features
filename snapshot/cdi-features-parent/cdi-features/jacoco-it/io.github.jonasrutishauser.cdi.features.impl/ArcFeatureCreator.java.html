@@ -8,14 +8,17 @@ import jakarta.enterprise.util.TypeLiteral;
 
 public class ArcFeatureCreator {
 
+<span class="fc" id="L11">    public static final String CACHE_CLASS = Cache.class.getName();</span>
+<span class="fc" id="L12">    public static final String CONFIGURATION_SELECTOR_CLASS = ConfigurationSelector.class.getName();</span>
+
     private ArcFeatureCreator() {
         // Utility class, no instantiation
     }
 
     public static &lt;T&gt; T create(SyntheticCreationalContext&lt;T&gt; context, TypeLiteral&lt;Instance&lt;T&gt;&gt; instanceType,
             Bean&lt;T&gt; ownBean, Feature featureLiteral) {
-<span class="fc" id="L17">        Instance&lt;T&gt; instance = context.getInjectedReference(instanceType, featureLiteral);</span>
-<span class="fc" id="L18">        return FeatureCreator.create(ownBean, instance.handlesStream(), context::getInjectedReference);</span>
+<span class="fc" id="L20">        Instance&lt;T&gt; instance = context.getInjectedReference(instanceType, featureLiteral);</span>
+<span class="fc" id="L21">        return FeatureCreator.create(ownBean, instance.handlesStream(), context::getInjectedReference);</span>
     }
 
 }
