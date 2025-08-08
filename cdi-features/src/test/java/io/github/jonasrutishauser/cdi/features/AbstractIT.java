@@ -39,10 +39,12 @@ public abstract class AbstractIT {
     @RepeatedTest(3)
     @SetSystemProperty(key = "cache.io.github.jonasrutishauser.cdi.features.AbstractIT$SampleFeature.millis", value="1")
     @SetSystemProperty(key = "feature", value = "31")
-    public void sampleFeature1() {
+    public void sampleFeature1() throws InterruptedException {
         setSelected(1);
 
         assertEquals("SampleFeature1", sampleFeature.test());
+        assertEquals("SampleFeature1", sampleFeature.test());
+        Thread.sleep(1); // wait for cache to expire
         assertEquals("SampleFeature1", sampleFeature.test());
     }
 
