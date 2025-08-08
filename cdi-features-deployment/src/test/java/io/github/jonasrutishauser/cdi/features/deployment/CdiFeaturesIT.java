@@ -29,7 +29,7 @@ class CdiFeaturesIT {
             .withApplicationRoot(archive -> archive //
                     .addClasses(Config.class, NotAFeature.class, GenericSampleFeature.class, SampleFeature.class,
                             SampleFeature1.class, SampleFeature2.class, SampleFeature2Selector.class,
-                            SampleFeature3.class, SampleFeatureNever.class, NeverSelector.class,
+                            SampleFeature3.class, SampleFeature4.class, SampleFeatureNever.class, NeverSelector.class,
                             SampleFeatureRemaining.class, NeverFeature.class, AlwaysFeature.class,
                             DefaultNotAFeature.class) //
                     .addAsManifestResource(EmptyAsset.INSTANCE, "beans.xml") //
@@ -89,6 +89,16 @@ class CdiFeaturesIT {
 
         assertEquals("SampleFeature3", sampleFeature.test());
         assertEquals("SampleFeature3", sampleFeature.test());
+    }
+
+    @Test
+    @SetSystemProperty(key = "feature", value = "some value")
+    @SetSystemProperty(key = "feature4", value = "some value")
+    void sampleFeature4() {
+        setSelected(13);
+
+        assertEquals("SampleFeature4", sampleFeature.test());
+        assertEquals("SampleFeature4", sampleFeature.test());
     }
 
     @RepeatedTest(3)

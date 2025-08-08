@@ -1,14 +1,13 @@
 package io.github.jonasrutishauser.cdi.features.deployment;
 
 import io.github.jonasrutishauser.cdi.features.Feature;
-import io.github.jonasrutishauser.cdi.features.Feature.Cache;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
-@Feature(remaining = true, cache = @Cache(durationMillis = 0))
-class SampleFeatureRemaining implements SampleFeature {
+@Feature(propertyKey = "feature4")
+class SampleFeature4 implements SampleFeature {
     @Override
     public String test() {
-        return "SampleFeatureRemaining";
+        return "SampleFeature4";
     }
 }

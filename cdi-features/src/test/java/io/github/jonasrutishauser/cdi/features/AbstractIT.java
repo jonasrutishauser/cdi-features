@@ -64,6 +64,16 @@ public abstract class AbstractIT {
         assertEquals("SampleFeature3", sampleFeature.test());
     }
 
+    @Test
+    @SetSystemProperty(key = "feature", value = "some value")
+    @SetSystemProperty(key = "feature4", value = "some value")
+    public void sampleFeature4() {
+        setSelected(13);
+
+        assertEquals("SampleFeature4", sampleFeature.test());
+        assertEquals("SampleFeature4", sampleFeature.test());
+    }
+
     @RepeatedTest(3)
     @SetSystemProperty(key = "feature", value = "42")
     public void sampleFeatureRemaining() {
@@ -286,6 +296,15 @@ public abstract class AbstractIT {
         }
     }
 
+    @ApplicationScoped
+    @Feature(propertyKey = "feature4")
+    static class SampleFeature4 implements SampleFeature {
+        @Override
+        public String test() {
+            return "SampleFeature4";
+        }
+    }
+
     @Dependent
     @Feature(selector = NeverSelector.class)
     static class SampleFeatureNever implements SampleFeature {
@@ -303,7 +322,7 @@ public abstract class AbstractIT {
     }
 
     @ApplicationScoped
-    @Feature(remaining = true)
+    @Feature(remaining = true, cache = @Cache(durationMillis = 0))
     static class SampleFeatureRemaining implements SampleFeature {
         @Override
         public String test() {
