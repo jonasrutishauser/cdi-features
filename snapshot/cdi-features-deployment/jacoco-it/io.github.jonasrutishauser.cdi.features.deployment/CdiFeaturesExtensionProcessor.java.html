@@ -122,7 +122,7 @@ import jakarta.enterprise.util.TypeLiteral;
 <span class="fc" id="L122">                    configurator.addInjectionPoint(selectorValue.asClass());</span>
                 }
             } else
-<span class="pc bpc" id="L125" title="2 of 6 branches missed.">                if (!configurationSelectorAdded &amp;&amp; propertyKeyValue != null &amp;&amp; !propertyKeyValue.asString().isEmpty()) {</span>
+<span class="pc bpc" id="L125" title="1 of 6 branches missed.">                if (!configurationSelectorAdded &amp;&amp; propertyKeyValue != null &amp;&amp; !propertyKeyValue.asString().isEmpty()) {</span>
 <span class="fc" id="L126">                    configurator.addInjectionPoint(</span>
 <span class="fc" id="L127">                            Type.create(DotName.createSimple(CONFIGURATION_SELECTOR_CLASS), Kind.CLASS));</span>
 <span class="fc" id="L128">                    configurationSelectorAdded = true;</span>
