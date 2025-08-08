@@ -233,42 +233,47 @@
 <a class="jxr_linenumber" name="L225" href="#L225">225</a>         CacheWithPropertyOnClass method() {
 <a class="jxr_linenumber" name="L226" href="#L226">226</a>             <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> CacheWithPropertyOnClass();
 <a class="jxr_linenumber" name="L227" href="#L227">227</a>         }
-<a class="jxr_linenumber" name="L228" href="#L228">228</a>     }
-<a class="jxr_linenumber" name="L229" href="#L229">229</a> 
-<a class="jxr_linenumber" name="L230" href="#L230">230</a>     @Feature(propertyKey = <span class="jxr_string">"some.property"</span>)
-<a class="jxr_linenumber" name="L231" href="#L231">231</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> WithPropertyKeyOnClass {}
-<a class="jxr_linenumber" name="L232" href="#L232">232</a> 
-<a class="jxr_linenumber" name="L233" href="#L233">233</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> WithPropertyKeyOnField {
-<a class="jxr_linenumber" name="L234" href="#L234">234</a>         @Produces
-<a class="jxr_linenumber" name="L235" href="#L235">235</a>         @Feature(propertyKey = <span class="jxr_string">"some.property"</span>)
-<a class="jxr_linenumber" name="L236" href="#L236">236</a>         <strong class="jxr_keyword">final</strong> WithPropertyKeyOnClass field = <strong class="jxr_keyword">new</strong> WithPropertyKeyOnClass();
-<a class="jxr_linenumber" name="L237" href="#L237">237</a>     }
-<a class="jxr_linenumber" name="L238" href="#L238">238</a> 
-<a class="jxr_linenumber" name="L239" href="#L239">239</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> WithPropertyKeyOnMethod {
-<a class="jxr_linenumber" name="L240" href="#L240">240</a>         @Produces
-<a class="jxr_linenumber" name="L241" href="#L241">241</a>         @Feature(propertyKey = <span class="jxr_string">"some.property"</span>)
-<a class="jxr_linenumber" name="L242" href="#L242">242</a>         WithPropertyKeyOnClass method() {
-<a class="jxr_linenumber" name="L243" href="#L243">243</a>             <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> WithPropertyKeyOnClass();
-<a class="jxr_linenumber" name="L244" href="#L244">244</a>         }
-<a class="jxr_linenumber" name="L245" href="#L245">245</a>     }
-<a class="jxr_linenumber" name="L246" href="#L246">246</a> 
-<a class="jxr_linenumber" name="L247" href="#L247">247</a>     @Feature(selector = WrongSelector.<strong class="jxr_keyword">class</strong>)
-<a class="jxr_linenumber" name="L248" href="#L248">248</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> WithWrongSelector {}
-<a class="jxr_linenumber" name="L249" href="#L249">249</a> 
-<a class="jxr_linenumber" name="L250" href="#L250">250</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> WrongSelector <strong class="jxr_keyword">extends</strong> WrongSelectorSuper&lt;Object, List&lt;String&gt;&gt; <strong class="jxr_keyword">implements</strong> Serializable {
-<a class="jxr_linenumber" name="L251" href="#L251">251</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">long</strong> serialVersionUID = 1L;
-<a class="jxr_linenumber" name="L252" href="#L252">252</a>     }
-<a class="jxr_linenumber" name="L253" href="#L253">253</a> 
-<a class="jxr_linenumber" name="L254" href="#L254">254</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> WrongSelectorSuper&lt;S, T <strong class="jxr_keyword">extends</strong> List&lt;? <strong class="jxr_keyword">extends</strong> CharSequence&gt;&gt; <strong class="jxr_keyword">implements</strong> WrongSelectorInterface&lt;T&gt; {
-<a class="jxr_linenumber" name="L255" href="#L255">255</a>         @Override
-<a class="jxr_linenumber" name="L256" href="#L256">256</a>         <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">boolean</strong> selected(Context&lt;? <strong class="jxr_keyword">extends</strong> T&gt; context) {
-<a class="jxr_linenumber" name="L257" href="#L257">257</a>             <strong class="jxr_keyword">return</strong> false;
-<a class="jxr_linenumber" name="L258" href="#L258">258</a>         }
-<a class="jxr_linenumber" name="L259" href="#L259">259</a>     }
-<a class="jxr_linenumber" name="L260" href="#L260">260</a> 
-<a class="jxr_linenumber" name="L261" href="#L261">261</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">interface</strong> WrongSelectorInterface&lt;S&gt; <strong class="jxr_keyword">extends</strong> ContextualSelector&lt;S&gt; {}
-<a class="jxr_linenumber" name="L262" href="#L262">262</a> 
-<a class="jxr_linenumber" name="L263" href="#L263">263</a> }
+<a class="jxr_linenumber" name="L228" href="#L228">228</a> 
+<a class="jxr_linenumber" name="L229" href="#L229">229</a>         @Feature
+<a class="jxr_linenumber" name="L230" href="#L230">230</a>         <strong class="jxr_keyword">void</strong> someOtherMethod() {
+<a class="jxr_linenumber" name="L231" href="#L231">231</a>             <em class="jxr_comment">// just to have a method</em>
+<a class="jxr_linenumber" name="L232" href="#L232">232</a>         }
+<a class="jxr_linenumber" name="L233" href="#L233">233</a>     }
+<a class="jxr_linenumber" name="L234" href="#L234">234</a> 
+<a class="jxr_linenumber" name="L235" href="#L235">235</a>     @Feature(propertyKey = <span class="jxr_string">"some.property"</span>)
+<a class="jxr_linenumber" name="L236" href="#L236">236</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> WithPropertyKeyOnClass {}
+<a class="jxr_linenumber" name="L237" href="#L237">237</a> 
+<a class="jxr_linenumber" name="L238" href="#L238">238</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> WithPropertyKeyOnField {
+<a class="jxr_linenumber" name="L239" href="#L239">239</a>         @Produces
+<a class="jxr_linenumber" name="L240" href="#L240">240</a>         @Feature(propertyKey = <span class="jxr_string">"some.property"</span>)
+<a class="jxr_linenumber" name="L241" href="#L241">241</a>         <strong class="jxr_keyword">final</strong> WithPropertyKeyOnClass field = <strong class="jxr_keyword">new</strong> WithPropertyKeyOnClass();
+<a class="jxr_linenumber" name="L242" href="#L242">242</a>     }
+<a class="jxr_linenumber" name="L243" href="#L243">243</a> 
+<a class="jxr_linenumber" name="L244" href="#L244">244</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> WithPropertyKeyOnMethod {
+<a class="jxr_linenumber" name="L245" href="#L245">245</a>         @Produces
+<a class="jxr_linenumber" name="L246" href="#L246">246</a>         @Feature(propertyKey = <span class="jxr_string">"some.property"</span>)
+<a class="jxr_linenumber" name="L247" href="#L247">247</a>         WithPropertyKeyOnClass method() {
+<a class="jxr_linenumber" name="L248" href="#L248">248</a>             <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> WithPropertyKeyOnClass();
+<a class="jxr_linenumber" name="L249" href="#L249">249</a>         }
+<a class="jxr_linenumber" name="L250" href="#L250">250</a>     }
+<a class="jxr_linenumber" name="L251" href="#L251">251</a> 
+<a class="jxr_linenumber" name="L252" href="#L252">252</a>     @Feature(selector = WrongSelector.<strong class="jxr_keyword">class</strong>)
+<a class="jxr_linenumber" name="L253" href="#L253">253</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> WithWrongSelector {}
+<a class="jxr_linenumber" name="L254" href="#L254">254</a> 
+<a class="jxr_linenumber" name="L255" href="#L255">255</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> WrongSelector <strong class="jxr_keyword">extends</strong> WrongSelectorSuper&lt;Object, List&lt;String&gt;&gt; <strong class="jxr_keyword">implements</strong> Serializable {
+<a class="jxr_linenumber" name="L256" href="#L256">256</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">long</strong> serialVersionUID = 1L;
+<a class="jxr_linenumber" name="L257" href="#L257">257</a>     }
+<a class="jxr_linenumber" name="L258" href="#L258">258</a> 
+<a class="jxr_linenumber" name="L259" href="#L259">259</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> WrongSelectorSuper&lt;S, T <strong class="jxr_keyword">extends</strong> List&lt;? <strong class="jxr_keyword">extends</strong> CharSequence&gt;&gt; <strong class="jxr_keyword">implements</strong> WrongSelectorInterface&lt;T&gt; {
+<a class="jxr_linenumber" name="L260" href="#L260">260</a>         @Override
+<a class="jxr_linenumber" name="L261" href="#L261">261</a>         <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">boolean</strong> selected(Context&lt;? <strong class="jxr_keyword">extends</strong> T&gt; context) {
+<a class="jxr_linenumber" name="L262" href="#L262">262</a>             <strong class="jxr_keyword">return</strong> false;
+<a class="jxr_linenumber" name="L263" href="#L263">263</a>         }
+<a class="jxr_linenumber" name="L264" href="#L264">264</a>     }
+<a class="jxr_linenumber" name="L265" href="#L265">265</a> 
+<a class="jxr_linenumber" name="L266" href="#L266">266</a>     <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">interface</strong> WrongSelectorInterface&lt;S&gt; <strong class="jxr_keyword">extends</strong> ContextualSelector&lt;S&gt; {}
+<a class="jxr_linenumber" name="L267" href="#L267">267</a> 
+<a class="jxr_linenumber" name="L268" href="#L268">268</a> }
 </pre>
 <hr/>
 <div id="footer">© 2025</div>

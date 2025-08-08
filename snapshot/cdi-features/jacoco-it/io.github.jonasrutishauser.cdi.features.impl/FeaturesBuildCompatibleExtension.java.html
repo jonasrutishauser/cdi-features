@@ -103,7 +103,7 @@ import jakarta.enterprise.lang.model.types.Type;
     private void addIdentifierAndCleanupCacheDurationProperty(DeclarationConfig declaration, boolean needsProduces,
             Messages messages) {
 <span class="fc" id="L105">        AnnotationInfo feature = declaration.info().annotation(Feature.class);</span>
-<span class="pc bpc" id="L106" title="1 of 6 branches missed.">        if (feature != null &amp;&amp; (!needsProduces || declaration.info().hasAnnotation(Produces.class))) {</span>
+<span class="fc bfc" id="L106" title="All 6 branches covered.">        if (feature != null &amp;&amp; (!needsProduces || declaration.info().hasAnnotation(Produces.class))) {</span>
 <span class="fc" id="L107">            declaration.addAnnotation(AnnotationBuilder.of(Identified.class).value(currentIdentifier++).build());</span>
 <span class="fc bfc" id="L108" title="All 4 branches covered.">            if (!mpConfigAvailable &amp;&amp; cacheDurationMillisPropertyIsDefined(feature)) {</span>
 <span class="fc" id="L109">                messages.warn(&quot;as MicroProfile Config is not available, cache durationMillisProperty will be ignored&quot;,</span>

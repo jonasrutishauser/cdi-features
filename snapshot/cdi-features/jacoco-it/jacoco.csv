@@ -2,13 +2,13 @@ GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_
 CDI Features,io.github.jonasrutishauser.cdi.features,NoSelectedFeatureException,1,42,1,5,0,9,1,7,0,5
 CDI Features,io.github.jonasrutishauser.cdi.features,Selector,0,3,0,0,0,1,0,1,0,1
 CDI Features,io.github.jonasrutishauser.cdi.features,ThrowableSelector,0,11,0,0,0,4,0,1,0,1
-CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesBuildCompatibleExtension,16,744,2,84,3,145,2,74,0,33
+CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesBuildCompatibleExtension,16,744,1,85,3,145,1,75,0,33
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,Cache,0,124,0,20,0,25,0,14,0,4
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesExtension,16,628,1,69,3,115,1,62,0,28
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureCreator,0,180,0,8,0,32,0,11,0,7
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesExtension.new TypeLiteral() {...},0,3,0,0,0,1,0,1,0,1
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,ConfigurationSelector,0,38,0,4,0,8,0,5,0,3
-CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureInstances,0,125,2,8,0,31,2,10,0,7
+CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureInstances,0,125,1,9,0,31,1,11,0,7
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureCreator.new FeatureCreator.Lookup() {...},0,29,0,2,0,5,0,3,0,2
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,Cache.CacheEntry,0,14,0,0,0,5,0,1,0,1
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesBuildCompatibleExtension.ScopeStop,0,10,0,0,0,3,0,2,0,2

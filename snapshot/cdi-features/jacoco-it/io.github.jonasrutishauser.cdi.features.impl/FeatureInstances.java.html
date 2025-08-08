@@ -75,7 +75,7 @@ class FeatureInstances&lt;T&gt; {
 <span class="fc" id="L75">        String property = feature.cache().durationMillisProperty();</span>
 <span class="fc" id="L76">        OptionalLong propertyValue = OptionalLong.empty();</span>
 <span class="fc bfc" id="L77" title="All 2 branches covered.">        if (isDefined(property)) {</span>
-<span class="pc bpc" id="L78" title="1 of 2 branches missed.">            if (property.contains(&quot;${type}&quot;)) {</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">            if (property.contains(&quot;${type}&quot;)) {</span>
 <span class="fc" id="L79">                String type = &quot;&lt;undefined&gt;&quot;;</span>
 <span class="pc bpc" id="L80" title="1 of 2 branches missed.">                if (contextual instanceof BeanAttributes) {</span>
 <span class="fc" id="L81">                    type = getType((BeanAttributes&lt;?&gt;) contextual).getTypeName();</span>
