@@ -25,7 +25,7 @@ public class NoSelectedFeatureException extends IllegalStateException {
 
     public static Type getType(BeanAttributes<?> contextual) {
         return contextual.getTypes().stream().reduce(Object.class,
-                (a, b) -> Object.class.equals(a) || b instanceof ParameterizedType ? b : a);
+                (a, b) -> b instanceof ParameterizedType || Object.class.equals(a) ? b : a);
     }
 
     public Contextual<?> getContextual() {
