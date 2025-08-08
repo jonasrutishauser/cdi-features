@@ -23,16 +23,18 @@
 <a class="jxr_linenumber" name="L15" href="#L15">15</a>      }
 <a class="jxr_linenumber" name="L16" href="#L16">16</a>  
 <a class="jxr_linenumber" name="L17" href="#L17">17</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> String getMessage(Contextual&lt;?&gt; contextual) {
-<a class="jxr_linenumber" name="L18" href="#L18">18</a>          Object description = contextual instanceof BeanAttributes ? ((BeanAttributes&lt;?&gt;) contextual).getTypes()
-<a class="jxr_linenumber" name="L19" href="#L19">19</a>                  : contextual;
-<a class="jxr_linenumber" name="L20" href="#L20">20</a>          <strong class="jxr_keyword">return</strong> <span class="jxr_string">"No selected feature for "</span> + description;
-<a class="jxr_linenumber" name="L21" href="#L21">21</a>      }
-<a class="jxr_linenumber" name="L22" href="#L22">22</a>  
-<a class="jxr_linenumber" name="L23" href="#L23">23</a>      <strong class="jxr_keyword">public</strong> Contextual&lt;?&gt; getContextual() {
-<a class="jxr_linenumber" name="L24" href="#L24">24</a>          <strong class="jxr_keyword">return</strong> contextual;
-<a class="jxr_linenumber" name="L25" href="#L25">25</a>      }
-<a class="jxr_linenumber" name="L26" href="#L26">26</a>  
-<a class="jxr_linenumber" name="L27" href="#L27">27</a>  }
+<a class="jxr_linenumber" name="L18" href="#L18">18</a>          Object description = contextual instanceof BeanAttributes
+<a class="jxr_linenumber" name="L19" href="#L19">19</a>                  ? ((BeanAttributes&lt;?&gt;) contextual).getTypes().stream().filter(t -&gt; !Object.<strong class="jxr_keyword">class</strong>.equals(t)).findFirst()
+<a class="jxr_linenumber" name="L20" href="#L20">20</a>                          .orElse(Object.<strong class="jxr_keyword">class</strong>)
+<a class="jxr_linenumber" name="L21" href="#L21">21</a>                  : contextual;
+<a class="jxr_linenumber" name="L22" href="#L22">22</a>          <strong class="jxr_keyword">return</strong> <span class="jxr_string">"No selected feature for "</span> + description;
+<a class="jxr_linenumber" name="L23" href="#L23">23</a>      }
+<a class="jxr_linenumber" name="L24" href="#L24">24</a>  
+<a class="jxr_linenumber" name="L25" href="#L25">25</a>      <strong class="jxr_keyword">public</strong> Contextual&lt;?&gt; getContextual() {
+<a class="jxr_linenumber" name="L26" href="#L26">26</a>          <strong class="jxr_keyword">return</strong> contextual;
+<a class="jxr_linenumber" name="L27" href="#L27">27</a>      }
+<a class="jxr_linenumber" name="L28" href="#L28">28</a>  
+<a class="jxr_linenumber" name="L29" href="#L29">29</a>  }
 </pre>
 <hr/>
 <div id="footer">© 2025</div>

@@ -1,9 +1,9 @@
 GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
-CDI Features,io.github.jonasrutishauser.cdi.features,NoSelectedFeatureException,24,0,2,0,7,0,4,0,3,0
+CDI Features,io.github.jonasrutishauser.cdi.features,NoSelectedFeatureException,2,36,2,2,0,9,2,4,0,4
 CDI Features,io.github.jonasrutishauser.cdi.features,Selector,3,0,0,0,1,0,1,0,1,0
 CDI Features,io.github.jonasrutishauser.cdi.features,ThrowableSelector,4,7,0,0,2,2,0,1,0,1
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesBuildCompatibleExtension,16,733,2,80,3,141,2,72,0,33
-CDI Features,io.github.jonasrutishauser.cdi.features.impl,Cache,5,119,1,19,1,24,1,13,0,4
+CDI Features,io.github.jonasrutishauser.cdi.features.impl,Cache,0,124,0,20,0,25,0,14,0,4
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesExtension,16,617,3,63,3,113,3,58,0,28
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureCreator,0,179,0,8,0,32,0,11,0,7
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesExtension.new TypeLiteral() {...},0,3,0,0,0,1,0,1,0,1

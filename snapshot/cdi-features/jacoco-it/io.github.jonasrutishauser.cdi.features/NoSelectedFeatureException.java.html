@@ -10,18 +10,20 @@ public class NoSelectedFeatureException extends IllegalStateException {
     private final transient Contextual&lt;?&gt; contextual;
 
     public NoSelectedFeatureException(Contextual&lt;?&gt; contextual) {
-<span class="nc" id="L13">        super(getMessage(contextual));</span>
-<span class="nc" id="L14">        this.contextual = contextual;</span>
-<span class="nc" id="L15">    }</span>
+<span class="fc" id="L13">        super(getMessage(contextual));</span>
+<span class="fc" id="L14">        this.contextual = contextual;</span>
+<span class="fc" id="L15">    }</span>
 
     private static String getMessage(Contextual&lt;?&gt; contextual) {
-<span class="nc bnc" id="L18" title="All 2 branches missed.">        Object description = contextual instanceof BeanAttributes ? ((BeanAttributes&lt;?&gt;) contextual).getTypes()</span>
-<span class="nc" id="L19">                : contextual;</span>
-<span class="nc" id="L20">        return &quot;No selected feature for &quot; + description;</span>
+<span class="pc bpc" id="L18" title="1 of 2 branches missed.">        Object description = contextual instanceof BeanAttributes</span>
+<span class="pc bpc" id="L19" title="1 of 2 branches missed.">                ? ((BeanAttributes&lt;?&gt;) contextual).getTypes().stream().filter(t -&gt; !Object.class.equals(t)).findFirst()</span>
+<span class="fc" id="L20">                        .orElse(Object.class)</span>
+<span class="pc" id="L21">                : contextual;</span>
+<span class="fc" id="L22">        return &quot;No selected feature for &quot; + description;</span>
     }
 
     public Contextual&lt;?&gt; getContextual() {
-<span class="nc" id="L24">        return contextual;</span>
+<span class="fc" id="L26">        return contextual;</span>
     }
 
 }

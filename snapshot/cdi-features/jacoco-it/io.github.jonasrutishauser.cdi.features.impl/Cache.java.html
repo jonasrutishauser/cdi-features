@@ -40,8 +40,8 @@ import jakarta.enterprise.inject.spi.Bean;
 <span class="fc" id="L40">                    return new CacheEntry(item, validUntil(cacheDurationInMillis.applyAsLong(item)));</span>
                 }
 <span class="fc" id="L42">            }</span>
-<span class="pc bpc" id="L43" title="1 of 2 branches missed.">            if (remaining == null) {</span>
-<span class="nc" id="L44">                throw new NoSelectedFeatureException(k);</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">            if (remaining == null) {</span>
+<span class="fc" id="L44">                throw new NoSelectedFeatureException(k);</span>
             }
 <span class="fc" id="L46">            return new CacheEntry(remaining, validUntil(cacheDurationInMillis.applyAsLong(remaining)));</span>
         });
