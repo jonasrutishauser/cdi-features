@@ -15,7 +15,9 @@ public class NoSelectedFeatureException extends IllegalStateException {
     }
 
     private static String getMessage(Contextual<?> contextual) {
-        Object description = contextual instanceof BeanAttributes ? ((BeanAttributes<?>) contextual).getTypes()
+        Object description = contextual instanceof BeanAttributes
+                ? ((BeanAttributes<?>) contextual).getTypes().stream().filter(t -> !Object.class.equals(t)).findFirst()
+                        .orElse(Object.class)
                 : contextual;
         return "No selected feature for " + description;
     }

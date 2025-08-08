@@ -1,11 +1,14 @@
 package io.github.jonasrutishauser.cdi.features;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Random;
 
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.SetSystemProperty;
 
 import io.github.jonasrutishauser.cdi.features.Feature.Cache;
@@ -13,6 +16,7 @@ import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Dependent;
 import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.util.TypeLiteral;
 import jakarta.inject.Inject;
 
@@ -85,6 +89,21 @@ public abstract class AbstractIT {
         assertEquals("SampleFeature2", genericFeatureInstance.get().test());
     }
 
+    @Test
+    public void noSelectedFeature() {
+        @SuppressWarnings("serial")
+        GenericSampleFeature<StringBuilder> genericFeatureInstance = instance
+                .select(new TypeLiteral<GenericSampleFeature<StringBuilder>>() {}).get();
+
+        NoSelectedFeatureException exception = assertThrows(NoSelectedFeatureException.class,
+                genericFeatureInstance::test);
+
+        assertEquals(
+                "No selected feature for io.github.jonasrutishauser.cdi.features.AbstractIT$GenericSampleFeature<java.lang.StringBuilder>",
+                exception.getMessage());
+        assertTrue(exception.getContextual() instanceof Bean);
+    }
+
     @ApplicationScoped
     static class Config {
         private int selected;
@@ -127,6 +146,15 @@ public abstract class AbstractIT {
     }
 
     static interface SampleFeature extends GenericSampleFeature<String> {
+    }
+
+    @Dependent
+    @Feature(selector = NeverSelector.class)
+    static class NeverFeature implements GenericSampleFeature<StringBuilder> {
+        @Override
+        public StringBuilder test() {
+            return fail("should not be called");
+        }
     }
 
     @Dependent
