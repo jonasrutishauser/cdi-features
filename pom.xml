@@ -18,8 +18,8 @@
 	<properties>
 		<maven.compiler.release>17</maven.compiler.release>
 
-		<quarkus.core.min>3.19</quarkus.core.min>
-		<quarkus.version>${quarkus.core.min}.1</quarkus.version>
+		<quarkus.core.min>3.25</quarkus.core.min>
+		<quarkus.version>${quarkus.core.min}.2</quarkus.version>
 
 		<root.artifactId>cdi-features</root.artifactId>
 	</properties>
