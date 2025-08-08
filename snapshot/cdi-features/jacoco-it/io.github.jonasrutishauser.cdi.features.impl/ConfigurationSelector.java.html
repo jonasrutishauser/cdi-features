@@ -24,7 +24,7 @@ class ConfigurationSelector implements ContextualSelector&lt;Object&gt; {
 <span class="fc" id="L24">        Feature feature = feature(context.bean()).orElseThrow();</span>
 <span class="fc" id="L25">        Optional&lt;String&gt; value = config.getOptionalValue(feature.propertyKey(), String.class);</span>
 <span class="fc" id="L26">        return value.filter(</span>
-<span class="pc bpc" id="L27" title="1 of 4 branches missed.">                v -&gt; feature.propertyValue().isEmpty() || v.equals(feature.propertyValue()))</span>
+<span class="fc bfc" id="L27" title="All 4 branches covered.">                v -&gt; feature.propertyValue().isEmpty() || v.equals(feature.propertyValue()))</span>
 <span class="fc" id="L28">                .isPresent();</span>
     }
 
