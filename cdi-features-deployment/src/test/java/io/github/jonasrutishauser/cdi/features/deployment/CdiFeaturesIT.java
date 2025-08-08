@@ -2,17 +2,21 @@ package io.github.jonasrutishauser.cdi.features.deployment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
 
 import org.jboss.shrinkwrap.api.asset.EmptyAsset;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junitpioneer.jupiter.SetSystemProperty;
 
+import io.github.jonasrutishauser.cdi.features.NoSelectedFeatureException;
 import io.quarkus.test.QuarkusUnitTest;
 import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.enterprise.util.TypeLiteral;
 import jakarta.inject.Inject;
@@ -23,9 +27,11 @@ class CdiFeaturesIT {
     static final QuarkusUnitTest quarkusConfig = new QuarkusUnitTest() //
             .setFlatClassPath(true) // needed for invoker
             .withApplicationRoot(archive -> archive //
-                    .addClasses(Config.class, GenericSampleFeature.class, SampleFeature.class, SampleFeature1.class,
-                            SampleFeature2.class, SampleFeature2Selector.class, SampleFeature3.class,
-                            SampleFeatureNever.class, NeverSelector.class, SampleFeatureRemaining.class) //
+                    .addClasses(Config.class, NotAFeature.class, GenericSampleFeature.class, SampleFeature.class,
+                            SampleFeature1.class, SampleFeature2.class, SampleFeature2Selector.class,
+                            SampleFeature3.class, SampleFeatureNever.class, NeverSelector.class,
+                            SampleFeatureRemaining.class, NeverFeature.class, AlwaysFeature.class,
+                            DefaultNotAFeature.class) //
                     .addAsManifestResource(EmptyAsset.INSTANCE, "beans.xml") //
             ).overrideConfigKey("quarkus.log.category.\"io.quarkus.arc\".level", "DEBUG");
 
@@ -34,6 +40,9 @@ class CdiFeaturesIT {
 
     @Inject
     SampleFeature sampleFeature;
+
+    @Inject
+    NotAFeature notAFeature;
 
     @Inject
     BeanManager beanManager;
@@ -107,6 +116,36 @@ class CdiFeaturesIT {
         assertTrue(config.isDestroyed(), "Beans should be destroyed");
         assertFalse(config.isFeature3Created(), "Feature3 should not be created");
         assertEquals("SampleFeature2", genericFeatureInstance.get().test());
+    }
+
+    @Test
+    void noSelectedFeature() {
+        @SuppressWarnings("serial")
+        GenericSampleFeature<StringBuilder> genericFeatureInstance = instance
+                .select(new TypeLiteral<GenericSampleFeature<StringBuilder>>() {}).get();
+
+        NoSelectedFeatureException exception = assertThrows(NoSelectedFeatureException.class,
+                genericFeatureInstance::test);
+
+        assertEquals(
+                "No selected feature for io.github.jonasrutishauser.cdi.features.deployment.GenericSampleFeature<java.lang.StringBuilder>",
+                exception.getMessage());
+        assertTrue(exception.getContextual() instanceof Bean);
+    }
+
+    @RepeatedTest(3)
+    void always() {
+        @SuppressWarnings("serial")
+        StringBuffer result = instance.select(new TypeLiteral<GenericSampleFeature<StringBuffer>>() {}).get().test();
+
+        assertEquals("always", result.toString());
+    }
+
+    @Test
+    void defaultScoped() {
+        CharSequence result = notAFeature.test();
+
+        assertEquals("default", result);
     }
 
 }

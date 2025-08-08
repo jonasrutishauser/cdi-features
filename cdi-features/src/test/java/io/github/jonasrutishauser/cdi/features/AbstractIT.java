@@ -1,6 +1,7 @@
 package io.github.jonasrutishauser.cdi.features;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -86,6 +87,7 @@ public abstract class AbstractIT {
         assertEquals("SampleFeature2", genericFeatureInstance.get().test());
         genericFeatureInstance.destroy(genericFeatureInstance.get());
         assertTrue(config.isDestroyed(), "Beans should be destroyed");
+        assertFalse(config.isFeature3Created(), "Feature3 should not be created");
         assertEquals("SampleFeature2", genericFeatureInstance.get().test());
     }
 
@@ -102,6 +104,21 @@ public abstract class AbstractIT {
                 "No selected feature for io.github.jonasrutishauser.cdi.features.AbstractIT$GenericSampleFeature<java.lang.StringBuilder>",
                 exception.getMessage());
         assertTrue(exception.getContextual() instanceof Bean);
+    }
+
+    @RepeatedTest(3)
+    public void always() {
+        @SuppressWarnings("serial")
+        StringBuffer result = instance.select(new TypeLiteral<GenericSampleFeature<StringBuffer>>() {}).get().test();
+
+        assertEquals("always", result.toString());
+    }
+
+    @Test
+    public void defaultScoped() {
+        CharSequence result = instance.select(NotAFeature.class).get().test();
+
+        assertEquals("default", result);
     }
 
     @ApplicationScoped
@@ -141,7 +158,11 @@ public abstract class AbstractIT {
         }
     }
 
-    static interface GenericSampleFeature<T extends CharSequence> {
+    static interface NotAFeature {
+        CharSequence test();
+    }
+
+    static interface GenericSampleFeature<T extends CharSequence> extends NotAFeature {
         T test();
     }
 
@@ -149,11 +170,39 @@ public abstract class AbstractIT {
     }
 
     @Dependent
+    static class DefaultNotAFeature implements NotAFeature {
+        @Override
+        public CharSequence test() {
+            return "default";
+        }
+    }
+
+    @Dependent
     @Feature(selector = NeverSelector.class)
-    static class NeverFeature implements GenericSampleFeature<StringBuilder> {
+    @SuppressWarnings("rawtypes")
+    static class NeverFeature implements GenericSampleFeature<StringBuilder>, ContextualSelector {
         @Override
         public StringBuilder test() {
             return fail("should not be called");
+        }
+
+        @Override
+        public boolean selected(Context context) {
+            return false;
+        }
+    }
+
+    @Dependent
+    @Feature
+    static class AlwaysFeature implements GenericSampleFeature<StringBuffer>, ThrowableSelector {
+        @Override
+        public StringBuffer test() {
+            return new StringBuffer("always");
+        }
+
+        @Override
+        public void valid() {
+            // should always be valid
         }
     }
 

@@ -80,7 +80,7 @@ public class CdiFeaturesExtensionProcessor {
                 classNamePrefix = classNamePrefix.substring(0, classNamePrefix.indexOf('<'));
             }
             String instanceTypeLiteralName = classNamePrefix + "$$instanceTypeLiteral$$"
-                    + counter.compute(classNamePrefix, (key, value) -> value == null ? 0 : value++);
+                    + counter.compute(classNamePrefix, (key, value) -> value == null ? 0 : ++value);
             ClassCreator.builder().classOutput(classGizmoAdaptor).className(instanceTypeLiteralName)
                     .signature(SignatureBuilder.forClass()
                             .setSuperClass(toGizmo(ParameterizedType.create(TypeLiteral.class, instanceType))))

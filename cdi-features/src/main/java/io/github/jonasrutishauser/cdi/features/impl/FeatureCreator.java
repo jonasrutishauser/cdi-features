@@ -62,7 +62,7 @@ public class FeatureCreator implements SyntheticBeanCreator<Object>  {
             } else if (isDefined(feature.propertyKey())) {
                 selector = lookup.getReference(ConfigurationSelector.class);
             } else {
-                selector = (Selector) () -> ((Selector) instance.getValue().get()).selected();
+                selector = ctx -> ((Selector) instance.getValue().get()).selected(ctx);
             }
             @SuppressWarnings("unchecked") // is checked by the extension
             ContextualSelector<? super T> contextualSelector = (ContextualSelector<? super T>) selector;

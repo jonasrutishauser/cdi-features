@@ -148,8 +148,10 @@ public class FeaturesExtension implements Extension {
         Map<Type, Set<Bean<?>>> features = new HashMap<>();
         for (Bean<?> featureBean : featureBeans) {
             for (Type type : featureBean.getTypes()) {
-                if (!Object.class.equals(type) && !ContextualSelector.class.equals(type) && !Selector.class.equals(type)
-                        && !ThrowableSelector.class.equals(type)) {
+                if (!Object.class.equals(type) && !ContextualSelector.class.equals(type)
+                        && !(type instanceof ParameterizedType parametrizedType
+                                && ContextualSelector.class.equals(parametrizedType.getRawType()))
+                        && !Selector.class.equals(type) && !ThrowableSelector.class.equals(type)) {
                     features.computeIfAbsent(type, t -> new HashSet<>()).add(featureBean);
                 }
             }

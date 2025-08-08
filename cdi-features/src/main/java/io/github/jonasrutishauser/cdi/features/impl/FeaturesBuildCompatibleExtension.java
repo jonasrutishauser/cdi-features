@@ -266,12 +266,16 @@ public class FeaturesBuildCompatibleExtension implements BuildCompatibleExtensio
         Map<Type, Set<BeanInfo>> features = new HashMap<>();
         Set<Type> excludedTypes = new HashSet<>();
         excludedTypes.add(types.of(Object.class));
-        excludedTypes.add(types.of(ContextualSelector.class));
+        Type contextualSelectorType = types.of(ContextualSelector.class);
+        excludedTypes.add(contextualSelectorType);
         excludedTypes.add(types.of(Selector.class));
         excludedTypes.add(types.of(ThrowableSelector.class));
         for (BeanInfo featureBean : featureBeans) {
             for (Type type : featureBean.types()) {
-                if (!excludedTypes.contains(type) && !typesWithDefaultScopedBeans.contains(type)) {
+                if (!excludedTypes.contains(type)
+                        && !(type.isParameterizedType()
+                                && contextualSelectorType.equals(type.asParameterizedType().genericClass()))
+                        && !typesWithDefaultScopedBeans.contains(type)) {
                     features.computeIfAbsent(type, t -> new HashSet<>()).add(featureBean);
                 }
             }

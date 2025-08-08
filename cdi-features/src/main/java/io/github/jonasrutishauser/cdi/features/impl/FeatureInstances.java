@@ -1,6 +1,7 @@
 package io.github.jonasrutishauser.cdi.features.impl;
 
-import java.lang.reflect.Type;
+import static io.github.jonasrutishauser.cdi.features.NoSelectedFeatureException.getType;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -11,7 +12,6 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import io.github.jonasrutishauser.cdi.features.ContextualSelector;
 import io.github.jonasrutishauser.cdi.features.ContextualSelector.Context;
 import io.github.jonasrutishauser.cdi.features.Feature;
-import io.github.jonasrutishauser.cdi.features.Selector;
 import io.github.jonasrutishauser.cdi.features.impl.Cache.Selection;
 import jakarta.enterprise.context.spi.Contextual;
 import jakarta.enterprise.inject.spi.Bean;
@@ -52,9 +52,6 @@ class FeatureInstances<T> {
             if (selector == null) {
                 return Selection.REMAINING;
             }
-            if (selector instanceof Selector s) {
-                return Selection.of(s.selected());
-            }
             return Selection.of(selector.selected(new Context<T>() {
                 @Override
                 @SuppressWarnings("unchecked")
@@ -81,8 +78,7 @@ class FeatureInstances<T> {
             if (property.contains("${type}")) {
                 String type = "<undefined>";
                 if (contextual instanceof BeanAttributes) {
-                    type = ((BeanAttributes<?>) contextual).getTypes().stream().filter(t -> !Object.class.equals(t))
-                            .findAny().map(Type::getTypeName).orElse(type);
+                    type = getType((BeanAttributes<?>) contextual).getTypeName();
                 }
                 property = property.replace("${type}", type);
             }
