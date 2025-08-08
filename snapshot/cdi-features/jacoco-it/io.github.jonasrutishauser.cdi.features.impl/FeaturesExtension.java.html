@@ -148,99 +148,101 @@ import jakarta.enterprise.util.TypeLiteral;
 <span class="fc" id="L148">        Map&lt;Type, Set&lt;Bean&lt;?&gt;&gt;&gt; features = new HashMap&lt;&gt;();</span>
 <span class="fc bfc" id="L149" title="All 2 branches covered.">        for (Bean&lt;?&gt; featureBean : featureBeans) {</span>
 <span class="fc bfc" id="L150" title="All 2 branches covered.">            for (Type type : featureBean.getTypes()) {</span>
-<span class="pc bpc" id="L151" title="1 of 6 branches missed.">                if (!Object.class.equals(type) &amp;&amp; !ContextualSelector.class.equals(type) &amp;&amp; !Selector.class.equals(type)</span>
-<span class="pc bpc" id="L152" title="1 of 2 branches missed.">                        &amp;&amp; !ThrowableSelector.class.equals(type)) {</span>
-<span class="fc" id="L153">                    features.computeIfAbsent(type, t -&gt; new HashSet&lt;&gt;()).add(featureBean);</span>
+<span class="fc bfc" id="L151" title="All 6 branches covered.">                if (!Object.class.equals(type) &amp;&amp; !ContextualSelector.class.equals(type)</span>
+<span class="fc" id="L152">                        &amp;&amp; !(type instanceof ParameterizedType parametrizedType</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">                                &amp;&amp; ContextualSelector.class.equals(parametrizedType.getRawType()))</span>
+<span class="fc bfc" id="L154" title="All 4 branches covered.">                        &amp;&amp; !Selector.class.equals(type) &amp;&amp; !ThrowableSelector.class.equals(type)) {</span>
+<span class="fc" id="L155">                    features.computeIfAbsent(type, t -&gt; new HashSet&lt;&gt;()).add(featureBean);</span>
                 }
-<span class="fc" id="L155">            }</span>
-<span class="fc" id="L156">        }</span>
-<span class="fc" id="L157">        return features;</span>
+<span class="fc" id="L157">            }</span>
+<span class="fc" id="L158">        }</span>
+<span class="fc" id="L159">        return features;</span>
     }
 
     private &lt;T&gt; T createDummy(BeanManager beanManager, Type type, CreationalContext&lt;Object&gt; ctx,
             Set&lt;Bean&lt;? extends T&gt;&gt; features) {
-<span class="fc" id="L162">        Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances = getFeatureInstances(beanManager, type, ctx, features);</span>
+<span class="fc" id="L164">        Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances = getFeatureInstances(beanManager, type, ctx, features);</span>
         @SuppressWarnings(&quot;unchecked&quot;)
-<span class="fc" id="L164">        Bean&lt;T&gt; ownBean = (Bean&lt;T&gt;) beanManager.resolve(beanManager.getBeans(type));</span>
-<span class="fc" id="L165">        context.setInstances(ownBean, new FeatureInstances&lt;&gt;(instances, getSelectors(beanManager, ctx, instances),</span>
-<span class="fc" id="L166">                getCache(beanManager, ctx)));</span>
-<span class="fc" id="L167">        return instances.values().iterator().next().get();</span>
+<span class="fc" id="L166">        Bean&lt;T&gt; ownBean = (Bean&lt;T&gt;) beanManager.resolve(beanManager.getBeans(type));</span>
+<span class="fc" id="L167">        context.setInstances(ownBean, new FeatureInstances&lt;&gt;(instances, getSelectors(beanManager, ctx, instances),</span>
+<span class="fc" id="L168">                getCache(beanManager, ctx)));</span>
+<span class="fc" id="L169">        return instances.values().iterator().next().get();</span>
     }
 
     private Cache getCache(BeanManager beanManager, CreationalContext&lt;Object&gt; ctx) {
-<span class="fc" id="L171">        return (Cache) beanManager.getReference(beanManager.resolve(beanManager.getBeans(Cache.class)), Cache.class,</span>
+<span class="fc" id="L173">        return (Cache) beanManager.getReference(beanManager.resolve(beanManager.getBeans(Cache.class)), Cache.class,</span>
                 ctx);
     }
 
     private static &lt;T&gt; Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; getFeatureInstances(BeanManager beanManager, Type type,
             CreationalContext&lt;Object&gt; ctx, Set&lt;Bean&lt;? extends T&gt;&gt; features) {
-<span class="fc" id="L177">        return features.stream().collect(toMap(identity(), bean -&gt; {</span>
+<span class="fc" id="L179">        return features.stream().collect(toMap(identity(), bean -&gt; {</span>
             @SuppressWarnings(&quot;unchecked&quot;)
-<span class="fc" id="L179">            T instance = (T) beanManager.getReference(bean, type, ctx);</span>
-<span class="fc" id="L180">            return () -&gt; instance;</span>
+<span class="fc" id="L181">            T instance = (T) beanManager.getReference(bean, type, ctx);</span>
+<span class="fc" id="L182">            return () -&gt; instance;</span>
         }));
     }
 
     private static &lt;T&gt; Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; getSelectors(BeanManager beanManager, CreationalContext&lt;Object&gt; ctx,
             Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances) {
-<span class="fc" id="L186">        Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; selectors = new HashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L187" title="All 2 branches covered.">        for (Entry&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instance : instances.entrySet()) {</span>
-<span class="fc" id="L188">            Feature feature = feature(instance.getKey()).orElseThrow();</span>
+<span class="fc" id="L188">        Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; selectors = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L189" title="All 2 branches covered.">        for (Entry&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instance : instances.entrySet()) {</span>
+<span class="fc" id="L190">            Feature feature = feature(instance.getKey()).orElseThrow();</span>
             ContextualSelector&lt;?&gt; selector;
-<span class="fc bfc" id="L190" title="All 2 branches covered.">            if (feature.remaining()) {</span>
-<span class="fc" id="L191">                selector = null;</span>
-<span class="fc bfc" id="L192" title="All 2 branches covered.">            } else if (hasDefinedSelector(feature)) {</span>
-<span class="fc" id="L193">                Set&lt;Bean&lt;?&gt;&gt; beans = beanManager.getBeans(feature.selector());</span>
-<span class="fc bfc" id="L194" title="All 2 branches covered.">                if (beans.isEmpty()) {</span>
-<span class="fc" id="L195">                    selector = createInstance(feature.selector());</span>
+<span class="fc bfc" id="L192" title="All 2 branches covered.">            if (feature.remaining()) {</span>
+<span class="fc" id="L193">                selector = null;</span>
+<span class="fc bfc" id="L194" title="All 2 branches covered.">            } else if (hasDefinedSelector(feature)) {</span>
+<span class="fc" id="L195">                Set&lt;Bean&lt;?&gt;&gt; beans = beanManager.getBeans(feature.selector());</span>
+<span class="fc bfc" id="L196" title="All 2 branches covered.">                if (beans.isEmpty()) {</span>
+<span class="fc" id="L197">                    selector = createInstance(feature.selector());</span>
                 } else {
-<span class="fc" id="L197">                    selector = (ContextualSelector&lt;?&gt;) beanManager.getReference(beanManager.resolve(beans),</span>
+<span class="fc" id="L199">                    selector = (ContextualSelector&lt;?&gt;) beanManager.getReference(beanManager.resolve(beans),</span>
                             GENERIC_CONTEXTUAL_SELECTOR_TYPE, ctx);
                 }
-<span class="fc bfc" id="L200" title="All 2 branches covered.">            } else if (isDefined(feature.propertyKey())) {</span>
-<span class="fc" id="L201">                selector = (ContextualSelector&lt;?&gt;) beanManager.getReference(</span>
-<span class="fc" id="L202">                        beanManager.resolve(beanManager.getBeans(ConfigurationSelector.class)),</span>
+<span class="fc bfc" id="L202" title="All 2 branches covered.">            } else if (isDefined(feature.propertyKey())) {</span>
+<span class="fc" id="L203">                selector = (ContextualSelector&lt;?&gt;) beanManager.getReference(</span>
+<span class="fc" id="L204">                        beanManager.resolve(beanManager.getBeans(ConfigurationSelector.class)),</span>
                         ContextualSelector.class, ctx);
             } else {
-<span class="fc" id="L205">                selector = (Selector) instance.getValue().get();</span>
+<span class="fc" id="L207">                selector = (Selector) instance.getValue().get();</span>
             }
             @SuppressWarnings(&quot;unchecked&quot;) // is checked in the validate method
-<span class="fc" id="L208">            ContextualSelector&lt;? super T&gt; contextualSelector = (ContextualSelector&lt;? super T&gt;) selector;</span>
-<span class="fc" id="L209">            selectors.put(instance.getKey(), contextualSelector);</span>
-<span class="fc" id="L210">        }</span>
-<span class="fc" id="L211">        return selectors;</span>
+<span class="fc" id="L210">            ContextualSelector&lt;? super T&gt; contextualSelector = (ContextualSelector&lt;? super T&gt;) selector;</span>
+<span class="fc" id="L211">            selectors.put(instance.getKey(), contextualSelector);</span>
+<span class="fc" id="L212">        }</span>
+<span class="fc" id="L213">        return selectors;</span>
     }
 
     static &lt;T&gt; T createInstance(Class&lt;T&gt; clazz) {
         try {
-<span class="fc" id="L216">            return clazz.getConstructor().newInstance();</span>
-<span class="nc" id="L217">        } catch (InstantiationException | IllegalAccessException | InvocationTargetException</span>
+<span class="fc" id="L218">            return clazz.getConstructor().newInstance();</span>
+<span class="nc" id="L219">        } catch (InstantiationException | IllegalAccessException | InvocationTargetException</span>
                 | NoSuchMethodException e) {
-<span class="nc" id="L219">            throw new IllegalStateException(&quot;Failed to create selector pojo instance &quot; + clazz, e);</span>
+<span class="nc" id="L221">            throw new IllegalStateException(&quot;Failed to create selector pojo instance &quot; + clazz, e);</span>
         }
     }
 
     static boolean hasDefinedSelector(Feature feature) {
-<span class="fc bfc" id="L224" title="All 2 branches covered.">        return !Selector.class.equals(feature.selector());</span>
+<span class="fc bfc" id="L226" title="All 2 branches covered.">        return !Selector.class.equals(feature.selector());</span>
     }
 
     void registerContext(@Observes AfterBeanDiscovery abd) {
-<span class="fc" id="L228">        abd.addContext(context);</span>
+<span class="fc" id="L230">        abd.addContext(context);</span>
         try {
-<span class="fc" id="L230">            Class&lt;?&gt; shutdownEvent = Class.forName(&quot;jakarta.enterprise.event.Shutdown&quot;, false,</span>
-<span class="fc" id="L231">                    getClass().getClassLoader());</span>
-<span class="fc" id="L232">            abd.addObserverMethod() //</span>
-<span class="fc" id="L233">                    .observedType(shutdownEvent) //</span>
-<span class="fc" id="L234">                    .priority(LIBRARY_AFTER + 900) //</span>
-<span class="fc" id="L235">                    .notifyWith(event -&gt; context.stop());</span>
-<span class="fc" id="L236">        } catch (ClassNotFoundException e) {</span>
+<span class="fc" id="L232">            Class&lt;?&gt; shutdownEvent = Class.forName(&quot;jakarta.enterprise.event.Shutdown&quot;, false,</span>
+<span class="fc" id="L233">                    getClass().getClassLoader());</span>
+<span class="fc" id="L234">            abd.addObserverMethod() //</span>
+<span class="fc" id="L235">                    .observedType(shutdownEvent) //</span>
+<span class="fc" id="L236">                    .priority(LIBRARY_AFTER + 900) //</span>
+<span class="fc" id="L237">                    .notifyWith(event -&gt; context.stop());</span>
+<span class="fc" id="L238">        } catch (ClassNotFoundException e) {</span>
             // ignore
-<span class="fc" id="L238">        }</span>
-<span class="fc" id="L239">    }</span>
+<span class="fc" id="L240">        }</span>
+<span class="fc" id="L241">    }</span>
 
     void stopContext(@Observes BeforeShutdown bs) {
-<span class="fc" id="L242">        context.stop();</span>
-<span class="fc" id="L243">    }</span>
+<span class="fc" id="L244">        context.stop();</span>
+<span class="fc" id="L245">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

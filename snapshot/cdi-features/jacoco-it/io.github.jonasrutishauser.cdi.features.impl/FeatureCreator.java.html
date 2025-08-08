@@ -62,7 +62,7 @@ import jakarta.enterprise.inject.spi.BeanManager;
 <span class="fc bfc" id="L62" title="All 2 branches covered.">            } else if (isDefined(feature.propertyKey())) {</span>
 <span class="fc" id="L63">                selector = lookup.getReference(ConfigurationSelector.class);</span>
             } else {
-<span class="fc" id="L65">                selector = (Selector) () -&gt; ((Selector) instance.getValue().get()).selected();</span>
+<span class="fc" id="L65">                selector = ctx -&gt; ((Selector) instance.getValue().get()).selected(ctx);</span>
             }
             @SuppressWarnings(&quot;unchecked&quot;) // is checked by the extension
 <span class="fc" id="L68">            ContextualSelector&lt;? super T&gt; contextualSelector = (ContextualSelector&lt;? super T&gt;) selector;</span>

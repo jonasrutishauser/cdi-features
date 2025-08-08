@@ -266,50 +266,54 @@ import jakarta.enterprise.lang.model.types.Type;
 <span class="fc" id="L266">        Map&lt;Type, Set&lt;BeanInfo&gt;&gt; features = new HashMap&lt;&gt;();</span>
 <span class="fc" id="L267">        Set&lt;Type&gt; excludedTypes = new HashSet&lt;&gt;();</span>
 <span class="fc" id="L268">        excludedTypes.add(types.of(Object.class));</span>
-<span class="fc" id="L269">        excludedTypes.add(types.of(ContextualSelector.class));</span>
-<span class="fc" id="L270">        excludedTypes.add(types.of(Selector.class));</span>
-<span class="fc" id="L271">        excludedTypes.add(types.of(ThrowableSelector.class));</span>
-<span class="fc bfc" id="L272" title="All 2 branches covered.">        for (BeanInfo featureBean : featureBeans) {</span>
-<span class="fc bfc" id="L273" title="All 2 branches covered.">            for (Type type : featureBean.types()) {</span>
-<span class="fc bfc" id="L274" title="All 4 branches covered.">                if (!excludedTypes.contains(type) &amp;&amp; !typesWithDefaultScopedBeans.contains(type)) {</span>
-<span class="fc" id="L275">                    features.computeIfAbsent(type, t -&gt; new HashSet&lt;&gt;()).add(featureBean);</span>
+<span class="fc" id="L269">        Type contextualSelectorType = types.of(ContextualSelector.class);</span>
+<span class="fc" id="L270">        excludedTypes.add(contextualSelectorType);</span>
+<span class="fc" id="L271">        excludedTypes.add(types.of(Selector.class));</span>
+<span class="fc" id="L272">        excludedTypes.add(types.of(ThrowableSelector.class));</span>
+<span class="fc bfc" id="L273" title="All 2 branches covered.">        for (BeanInfo featureBean : featureBeans) {</span>
+<span class="fc bfc" id="L274" title="All 2 branches covered.">            for (Type type : featureBean.types()) {</span>
+<span class="fc bfc" id="L275" title="All 2 branches covered.">                if (!excludedTypes.contains(type)</span>
+<span class="fc bfc" id="L276" title="All 2 branches covered.">                        &amp;&amp; !(type.isParameterizedType()</span>
+<span class="fc bfc" id="L277" title="All 2 branches covered.">                                &amp;&amp; contextualSelectorType.equals(type.asParameterizedType().genericClass()))</span>
+<span class="fc bfc" id="L278" title="All 2 branches covered.">                        &amp;&amp; !typesWithDefaultScopedBeans.contains(type)) {</span>
+<span class="fc" id="L279">                    features.computeIfAbsent(type, t -&gt; new HashSet&lt;&gt;()).add(featureBean);</span>
                 }
-<span class="fc" id="L277">            }</span>
-<span class="fc" id="L278">        }</span>
-<span class="fc" id="L279">        return features;</span>
+<span class="fc" id="L281">            }</span>
+<span class="fc" id="L282">        }</span>
+<span class="fc" id="L283">        return features;</span>
     }
 
     private Class&lt;?&gt; toClass(Type type) {
         try {
-<span class="fc" id="L284">            return Class.forName(toClassInfo(type).name(), false, getClass().getClassLoader());</span>
-<span class="nc" id="L285">        } catch (ClassNotFoundException e) {</span>
-<span class="nc" id="L286">            throw new IllegalStateException(&quot;unsupported type &quot; + type, e);</span>
+<span class="fc" id="L288">            return Class.forName(toClassInfo(type).name(), false, getClass().getClassLoader());</span>
+<span class="nc" id="L289">        } catch (ClassNotFoundException e) {</span>
+<span class="nc" id="L290">            throw new IllegalStateException(&quot;unsupported type &quot; + type, e);</span>
         }
     }
 
     private ClassInfo toClassInfo(Type type) {
-<span class="fc bfc" id="L291" title="All 2 branches covered.">        if (type.isClass()) {</span>
-<span class="fc" id="L292">            return type.asClass().declaration();</span>
+<span class="fc bfc" id="L295" title="All 2 branches covered.">        if (type.isClass()) {</span>
+<span class="fc" id="L296">            return type.asClass().declaration();</span>
         }
-<span class="pc bpc" id="L294" title="1 of 2 branches missed.">        if (type.isParameterizedType()) {</span>
-<span class="fc" id="L295">            return type.asParameterizedType().genericClass().declaration();</span>
+<span class="pc bpc" id="L298" title="1 of 2 branches missed.">        if (type.isParameterizedType()) {</span>
+<span class="fc" id="L299">            return type.asParameterizedType().genericClass().declaration();</span>
         }
-<span class="nc" id="L297">        throw new IllegalStateException(&quot;unsupported type &quot; + type);</span>
+<span class="nc" id="L301">        throw new IllegalStateException(&quot;unsupported type &quot; + type);</span>
     }
 
     @Synthesis
     @Priority(LIBRARY_BEFORE + 500)
     public void registerScopeStop(SyntheticComponents components, Types types) {
-<span class="fc" id="L303">        components.addObserver(Shutdown.class) //</span>
-<span class="fc" id="L304">                .priority(LIBRARY_AFTER + 900) //</span>
-<span class="fc" id="L305">                .observeWith(ScopeStop.class);</span>
-<span class="fc" id="L306">    }</span>
+<span class="fc" id="L307">        components.addObserver(Shutdown.class) //</span>
+<span class="fc" id="L308">                .priority(LIBRARY_AFTER + 900) //</span>
+<span class="fc" id="L309">                .observeWith(ScopeStop.class);</span>
+<span class="fc" id="L310">    }</span>
 
-<span class="fc" id="L308">    public static class ScopeStop implements SyntheticObserver&lt;Shutdown&gt; {</span>
+<span class="fc" id="L312">    public static class ScopeStop implements SyntheticObserver&lt;Shutdown&gt; {</span>
         @Override
         public void observe(EventContext&lt;Shutdown&gt; event, Parameters params) throws Exception {
-<span class="fc" id="L311">            ((FeatureContext) CDI.current().getBeanManager().getContext(FeatureScoped.class)).stop();</span>
-<span class="fc" id="L312">        }</span>
+<span class="fc" id="L315">            ((FeatureContext) CDI.current().getBeanManager().getContext(FeatureScoped.class)).stop();</span>
+<span class="fc" id="L316">        }</span>
     }
 
 }

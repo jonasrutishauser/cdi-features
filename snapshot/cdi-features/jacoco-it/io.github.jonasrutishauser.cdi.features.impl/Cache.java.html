@@ -28,7 +28,7 @@ import jakarta.enterprise.inject.spi.Bean;
     public &lt;T&gt; Bean&lt;?&gt; compute(Contextual&lt;T&gt; key, Collection&lt;Bean&lt;? extends T&gt;&gt; items,
             Function&lt;Bean&lt;? extends T&gt;, Selection&gt; selection, ToLongFunction&lt;Bean&lt;? extends T&gt;&gt; cacheDurationInMillis) {
 <span class="fc" id="L30">        CacheEntry entry = entries.compute(key, (k, current) -&gt; {</span>
-<span class="fc bfc" id="L31" title="All 6 branches covered.">            if (current != null &amp;&amp; (current.forever || !current.validUntil.isBefore(Instant.now(clock)))) {</span>
+<span class="pc bpc" id="L31" title="1 of 6 branches missed.">            if (current != null &amp;&amp; (current.forever || !current.validUntil.isBefore(Instant.now(clock)))) {</span>
 <span class="fc" id="L32">                return current;</span>
             }
 <span class="fc" id="L34">            Bean&lt;? extends T&gt; remaining = null;</span>

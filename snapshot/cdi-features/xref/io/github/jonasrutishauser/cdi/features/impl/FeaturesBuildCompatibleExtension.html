@@ -274,53 +274,57 @@
 <a class="jxr_linenumber" name="L266" href="#L266">266</a>         Map&lt;Type, Set&lt;BeanInfo&gt;&gt; features = <strong class="jxr_keyword">new</strong> HashMap&lt;&gt;();
 <a class="jxr_linenumber" name="L267" href="#L267">267</a>         Set&lt;Type&gt; excludedTypes = <strong class="jxr_keyword">new</strong> HashSet&lt;&gt;();
 <a class="jxr_linenumber" name="L268" href="#L268">268</a>         excludedTypes.add(types.of(Object.<strong class="jxr_keyword">class</strong>));
-<a class="jxr_linenumber" name="L269" href="#L269">269</a>         excludedTypes.add(types.of(ContextualSelector.<strong class="jxr_keyword">class</strong>));
-<a class="jxr_linenumber" name="L270" href="#L270">270</a>         excludedTypes.add(types.of(Selector.<strong class="jxr_keyword">class</strong>));
-<a class="jxr_linenumber" name="L271" href="#L271">271</a>         excludedTypes.add(types.of(ThrowableSelector.<strong class="jxr_keyword">class</strong>));
-<a class="jxr_linenumber" name="L272" href="#L272">272</a>         <strong class="jxr_keyword">for</strong> (BeanInfo featureBean : featureBeans) {
-<a class="jxr_linenumber" name="L273" href="#L273">273</a>             <strong class="jxr_keyword">for</strong> (Type type : featureBean.types()) {
-<a class="jxr_linenumber" name="L274" href="#L274">274</a>                 <strong class="jxr_keyword">if</strong> (!excludedTypes.contains(type) &amp;&amp; !typesWithDefaultScopedBeans.contains(type)) {
-<a class="jxr_linenumber" name="L275" href="#L275">275</a>                     features.computeIfAbsent(type, t -&gt; <strong class="jxr_keyword">new</strong> HashSet&lt;&gt;()).add(featureBean);
-<a class="jxr_linenumber" name="L276" href="#L276">276</a>                 }
-<a class="jxr_linenumber" name="L277" href="#L277">277</a>             }
-<a class="jxr_linenumber" name="L278" href="#L278">278</a>         }
-<a class="jxr_linenumber" name="L279" href="#L279">279</a>         <strong class="jxr_keyword">return</strong> features;
-<a class="jxr_linenumber" name="L280" href="#L280">280</a>     }
-<a class="jxr_linenumber" name="L281" href="#L281">281</a> 
-<a class="jxr_linenumber" name="L282" href="#L282">282</a>     <strong class="jxr_keyword">private</strong> Class&lt;?&gt; toClass(Type type) {
-<a class="jxr_linenumber" name="L283" href="#L283">283</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L284" href="#L284">284</a>             <strong class="jxr_keyword">return</strong> Class.forName(toClassInfo(type).name(), false, getClass().getClassLoader());
-<a class="jxr_linenumber" name="L285" href="#L285">285</a>         } <strong class="jxr_keyword">catch</strong> (ClassNotFoundException e) {
-<a class="jxr_linenumber" name="L286" href="#L286">286</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalStateException(<span class="jxr_string">"unsupported type "</span> + type, e);
-<a class="jxr_linenumber" name="L287" href="#L287">287</a>         }
-<a class="jxr_linenumber" name="L288" href="#L288">288</a>     }
-<a class="jxr_linenumber" name="L289" href="#L289">289</a> 
-<a class="jxr_linenumber" name="L290" href="#L290">290</a>     <strong class="jxr_keyword">private</strong> ClassInfo toClassInfo(Type type) {
-<a class="jxr_linenumber" name="L291" href="#L291">291</a>         <strong class="jxr_keyword">if</strong> (type.isClass()) {
-<a class="jxr_linenumber" name="L292" href="#L292">292</a>             <strong class="jxr_keyword">return</strong> type.asClass().declaration();
-<a class="jxr_linenumber" name="L293" href="#L293">293</a>         }
-<a class="jxr_linenumber" name="L294" href="#L294">294</a>         <strong class="jxr_keyword">if</strong> (type.isParameterizedType()) {
-<a class="jxr_linenumber" name="L295" href="#L295">295</a>             <strong class="jxr_keyword">return</strong> type.asParameterizedType().genericClass().declaration();
-<a class="jxr_linenumber" name="L296" href="#L296">296</a>         }
-<a class="jxr_linenumber" name="L297" href="#L297">297</a>         <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalStateException(<span class="jxr_string">"unsupported type "</span> + type);
-<a class="jxr_linenumber" name="L298" href="#L298">298</a>     }
-<a class="jxr_linenumber" name="L299" href="#L299">299</a> 
-<a class="jxr_linenumber" name="L300" href="#L300">300</a>     @Synthesis
-<a class="jxr_linenumber" name="L301" href="#L301">301</a>     @Priority(LIBRARY_BEFORE + 500)
-<a class="jxr_linenumber" name="L302" href="#L302">302</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> registerScopeStop(SyntheticComponents components, Types types) {
-<a class="jxr_linenumber" name="L303" href="#L303">303</a>         components.addObserver(Shutdown.<strong class="jxr_keyword">class</strong>) <em class="jxr_comment">//</em>
-<a class="jxr_linenumber" name="L304" href="#L304">304</a>                 .priority(LIBRARY_AFTER + 900) <em class="jxr_comment">//</em>
-<a class="jxr_linenumber" name="L305" href="#L305">305</a>                 .observeWith(ScopeStop.<strong class="jxr_keyword">class</strong>);
-<a class="jxr_linenumber" name="L306" href="#L306">306</a>     }
-<a class="jxr_linenumber" name="L307" href="#L307">307</a> 
-<a class="jxr_linenumber" name="L308" href="#L308">308</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> ScopeStop <strong class="jxr_keyword">implements</strong> SyntheticObserver&lt;Shutdown&gt; {
-<a class="jxr_linenumber" name="L309" href="#L309">309</a>         @Override
-<a class="jxr_linenumber" name="L310" href="#L310">310</a>         <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> observe(EventContext&lt;Shutdown&gt; event, Parameters params) <strong class="jxr_keyword">throws</strong> Exception {
-<a class="jxr_linenumber" name="L311" href="#L311">311</a>             ((<a name="FeatureContext" href="../../../../../../io/github/jonasrutishauser/cdi/features/impl/FeatureContext.html#FeatureContext">FeatureContext</a>) CDI.current().getBeanManager().getContext(FeatureScoped.<strong class="jxr_keyword">class</strong>)).stop();
-<a class="jxr_linenumber" name="L312" href="#L312">312</a>         }
-<a class="jxr_linenumber" name="L313" href="#L313">313</a>     }
-<a class="jxr_linenumber" name="L314" href="#L314">314</a> 
-<a class="jxr_linenumber" name="L315" href="#L315">315</a> }
+<a class="jxr_linenumber" name="L269" href="#L269">269</a>         Type contextualSelectorType = types.of(ContextualSelector.<strong class="jxr_keyword">class</strong>);
+<a class="jxr_linenumber" name="L270" href="#L270">270</a>         excludedTypes.add(contextualSelectorType);
+<a class="jxr_linenumber" name="L271" href="#L271">271</a>         excludedTypes.add(types.of(Selector.<strong class="jxr_keyword">class</strong>));
+<a class="jxr_linenumber" name="L272" href="#L272">272</a>         excludedTypes.add(types.of(ThrowableSelector.<strong class="jxr_keyword">class</strong>));
+<a class="jxr_linenumber" name="L273" href="#L273">273</a>         <strong class="jxr_keyword">for</strong> (BeanInfo featureBean : featureBeans) {
+<a class="jxr_linenumber" name="L274" href="#L274">274</a>             <strong class="jxr_keyword">for</strong> (Type type : featureBean.types()) {
+<a class="jxr_linenumber" name="L275" href="#L275">275</a>                 <strong class="jxr_keyword">if</strong> (!excludedTypes.contains(type)
+<a class="jxr_linenumber" name="L276" href="#L276">276</a>                         &amp;&amp; !(type.isParameterizedType()
+<a class="jxr_linenumber" name="L277" href="#L277">277</a>                                 &amp;&amp; contextualSelectorType.equals(type.asParameterizedType().genericClass()))
+<a class="jxr_linenumber" name="L278" href="#L278">278</a>                         &amp;&amp; !typesWithDefaultScopedBeans.contains(type)) {
+<a class="jxr_linenumber" name="L279" href="#L279">279</a>                     features.computeIfAbsent(type, t -&gt; <strong class="jxr_keyword">new</strong> HashSet&lt;&gt;()).add(featureBean);
+<a class="jxr_linenumber" name="L280" href="#L280">280</a>                 }
+<a class="jxr_linenumber" name="L281" href="#L281">281</a>             }
+<a class="jxr_linenumber" name="L282" href="#L282">282</a>         }
+<a class="jxr_linenumber" name="L283" href="#L283">283</a>         <strong class="jxr_keyword">return</strong> features;
+<a class="jxr_linenumber" name="L284" href="#L284">284</a>     }
+<a class="jxr_linenumber" name="L285" href="#L285">285</a> 
+<a class="jxr_linenumber" name="L286" href="#L286">286</a>     <strong class="jxr_keyword">private</strong> Class&lt;?&gt; toClass(Type type) {
+<a class="jxr_linenumber" name="L287" href="#L287">287</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L288" href="#L288">288</a>             <strong class="jxr_keyword">return</strong> Class.forName(toClassInfo(type).name(), false, getClass().getClassLoader());
+<a class="jxr_linenumber" name="L289" href="#L289">289</a>         } <strong class="jxr_keyword">catch</strong> (ClassNotFoundException e) {
+<a class="jxr_linenumber" name="L290" href="#L290">290</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalStateException(<span class="jxr_string">"unsupported type "</span> + type, e);
+<a class="jxr_linenumber" name="L291" href="#L291">291</a>         }
+<a class="jxr_linenumber" name="L292" href="#L292">292</a>     }
+<a class="jxr_linenumber" name="L293" href="#L293">293</a> 
+<a class="jxr_linenumber" name="L294" href="#L294">294</a>     <strong class="jxr_keyword">private</strong> ClassInfo toClassInfo(Type type) {
+<a class="jxr_linenumber" name="L295" href="#L295">295</a>         <strong class="jxr_keyword">if</strong> (type.isClass()) {
+<a class="jxr_linenumber" name="L296" href="#L296">296</a>             <strong class="jxr_keyword">return</strong> type.asClass().declaration();
+<a class="jxr_linenumber" name="L297" href="#L297">297</a>         }
+<a class="jxr_linenumber" name="L298" href="#L298">298</a>         <strong class="jxr_keyword">if</strong> (type.isParameterizedType()) {
+<a class="jxr_linenumber" name="L299" href="#L299">299</a>             <strong class="jxr_keyword">return</strong> type.asParameterizedType().genericClass().declaration();
+<a class="jxr_linenumber" name="L300" href="#L300">300</a>         }
+<a class="jxr_linenumber" name="L301" href="#L301">301</a>         <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalStateException(<span class="jxr_string">"unsupported type "</span> + type);
+<a class="jxr_linenumber" name="L302" href="#L302">302</a>     }
+<a class="jxr_linenumber" name="L303" href="#L303">303</a> 
+<a class="jxr_linenumber" name="L304" href="#L304">304</a>     @Synthesis
+<a class="jxr_linenumber" name="L305" href="#L305">305</a>     @Priority(LIBRARY_BEFORE + 500)
+<a class="jxr_linenumber" name="L306" href="#L306">306</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> registerScopeStop(SyntheticComponents components, Types types) {
+<a class="jxr_linenumber" name="L307" href="#L307">307</a>         components.addObserver(Shutdown.<strong class="jxr_keyword">class</strong>) <em class="jxr_comment">//</em>
+<a class="jxr_linenumber" name="L308" href="#L308">308</a>                 .priority(LIBRARY_AFTER + 900) <em class="jxr_comment">//</em>
+<a class="jxr_linenumber" name="L309" href="#L309">309</a>                 .observeWith(ScopeStop.<strong class="jxr_keyword">class</strong>);
+<a class="jxr_linenumber" name="L310" href="#L310">310</a>     }
+<a class="jxr_linenumber" name="L311" href="#L311">311</a> 
+<a class="jxr_linenumber" name="L312" href="#L312">312</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> ScopeStop <strong class="jxr_keyword">implements</strong> SyntheticObserver&lt;Shutdown&gt; {
+<a class="jxr_linenumber" name="L313" href="#L313">313</a>         @Override
+<a class="jxr_linenumber" name="L314" href="#L314">314</a>         <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> observe(EventContext&lt;Shutdown&gt; event, Parameters params) <strong class="jxr_keyword">throws</strong> Exception {
+<a class="jxr_linenumber" name="L315" href="#L315">315</a>             ((<a name="FeatureContext" href="../../../../../../io/github/jonasrutishauser/cdi/features/impl/FeatureContext.html#FeatureContext">FeatureContext</a>) CDI.current().getBeanManager().getContext(FeatureScoped.<strong class="jxr_keyword">class</strong>)).stop();
+<a class="jxr_linenumber" name="L316" href="#L316">316</a>         }
+<a class="jxr_linenumber" name="L317" href="#L317">317</a>     }
+<a class="jxr_linenumber" name="L318" href="#L318">318</a> 
+<a class="jxr_linenumber" name="L319" href="#L319">319</a> }
 </pre>
 <hr/>
 <div id="footer">© 2025</div>
