@@ -3,7 +3,7 @@ CDI Features,io.github.jonasrutishauser.cdi.features,NoSelectedFeatureException,
 CDI Features,io.github.jonasrutishauser.cdi.features,Selector,0,3,0,0,0,1,0,1,0,1
 CDI Features,io.github.jonasrutishauser.cdi.features,ThrowableSelector,0,11,0,0,0,4,0,1,0,1
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesBuildCompatibleExtension,16,744,2,84,3,145,2,74,0,33
-CDI Features,io.github.jonasrutishauser.cdi.features.impl,Cache,0,124,1,19,0,25,1,13,0,4
+CDI Features,io.github.jonasrutishauser.cdi.features.impl,Cache,0,124,0,20,0,25,0,14,0,4
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesExtension,16,628,1,69,3,115,1,62,0,28
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureCreator,0,180,0,8,0,32,0,11,0,7
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesExtension.new TypeLiteral() {...},0,3,0,0,0,1,0,1,0,1
