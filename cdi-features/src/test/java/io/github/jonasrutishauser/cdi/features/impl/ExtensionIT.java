@@ -225,6 +225,11 @@ class ExtensionIT {
         CacheWithPropertyOnClass method() {
             return new CacheWithPropertyOnClass();
         }
+
+        @Feature
+        void someOtherMethod() {
+            // just to have a method
+        }
     }
 
     @Feature(propertyKey = "some.property")

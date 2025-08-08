@@ -282,7 +282,7 @@ public abstract class AbstractIT {
     }
 
     @ApplicationScoped
-    @Feature(propertyKey = "feature", propertyValue = "3", cache = @Cache(durationMillis = 0))
+    @Feature(propertyKey = "feature", propertyValue = "3", cache = @Cache(durationMillis = 0, durationMillisProperty = "not.defined.property"))
     static class SampleFeature3 implements SampleFeature {
         SampleFeature3() {
         }
