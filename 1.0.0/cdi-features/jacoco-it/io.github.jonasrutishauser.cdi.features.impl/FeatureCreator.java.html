@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FeatureCreator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CDI Features</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features.impl</a> &gt; <span class="el_source">FeatureCreator.java</span></div><h1>FeatureCreator.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features.impl;
+
+import static io.github.jonasrutishauser.cdi.features.impl.FeatureInstances.feature;
+import static io.github.jonasrutishauser.cdi.features.impl.FeatureInstances.isDefined;
+import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.createInstance;
+import static io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension.hasDefinedSelector;
+
+import java.lang.annotation.Annotation;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import io.github.jonasrutishauser.cdi.features.ContextualSelector;
+import io.github.jonasrutishauser.cdi.features.Feature;
+import io.github.jonasrutishauser.cdi.features.Selector;
+import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.Instance.Handle;
+import jakarta.enterprise.inject.build.compatible.spi.Parameters;
+import jakarta.enterprise.inject.build.compatible.spi.SyntheticBeanCreator;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.enterprise.inject.spi.BeanContainer;
+import jakarta.enterprise.inject.spi.BeanManager;
+
+<span class="fc" id="L28">public class FeatureCreator implements SyntheticBeanCreator&lt;Object&gt;  {</span>
+
+    static final String IDENTIFIER = &quot;identfier&quot;;
+    static final String BEANS_IDENTIFIER = &quot;beans.identfier&quot;;
+
+    @FunctionalInterface
+    interface Lookup {
+        &lt;T&gt; T getReference(Class&lt;T&gt; type) throws IllegalArgumentException;
+    }
+
+    static &lt;T&gt; T create(Bean&lt;T&gt; ownBean, Stream&lt;? extends Handle&lt;? extends T&gt;&gt; instancesStream, Lookup lookup) {
+<span class="fc" id="L39">        Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances = instancesStream</span>
+<span class="fc" id="L40">                .collect(Collectors.toMap(Handle::getBean, handle -&gt; handle::get));</span>
+<span class="fc" id="L41">        Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; selectors = getSelectors(lookup, instances);</span>
+<span class="fc" id="L42">        FeatureContext context = (FeatureContext) lookup.getReference(BeanManager.class)</span>
+<span class="fc" id="L43">                .getContext(FeatureScoped.class);</span>
+<span class="fc" id="L44">        context.setInstances(ownBean, new FeatureInstances&lt;&gt;(instances, selectors, lookup.getReference(Cache.class)));</span>
+<span class="fc" id="L45">        return instances.values().iterator().next().get();</span>
+    }
+
+    private static &lt;T&gt; Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; getSelectors(Lookup lookup,
+            Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances) {
+<span class="fc" id="L50">        Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; selectors = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">        for (Entry&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instance : instances.entrySet()) {</span>
+<span class="fc" id="L52">            Feature feature = feature(instance.getKey()).orElseThrow();</span>
+            ContextualSelector&lt;?&gt; selector;
+<span class="fc bfc" id="L54" title="All 2 branches covered.">            if (feature.remaining()) {</span>
+<span class="fc" id="L55">                selector = null;</span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">            } else if (hasDefinedSelector(feature)) {</span>
+                try {
+<span class="fc" id="L58">                    selector = lookup.getReference(feature.selector());</span>
+<span class="fc" id="L59">                } catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L60">                    selector = createInstance(feature.selector());</span>
+<span class="fc" id="L61">                }</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">            } else if (isDefined(feature.propertyKey())) {</span>
+<span class="fc" id="L63">                selector = lookup.getReference(ConfigurationSelector.class);</span>
+            } else {
+<span class="fc" id="L65">                selector = ctx -&gt; ((Selector) instance.getValue().get()).selected(ctx);</span>
+            }
+            @SuppressWarnings(&quot;unchecked&quot;) // is checked by the extension
+<span class="fc" id="L68">            ContextualSelector&lt;? super T&gt; contextualSelector = (ContextualSelector&lt;? super T&gt;) selector;</span>
+<span class="fc" id="L69">            selectors.put(instance.getKey(), contextualSelector);</span>
+<span class="fc" id="L70">        }</span>
+<span class="fc" id="L71">        return selectors;</span>
+    }
+
+    @Override
+    public Object create(Instance&lt;Object&gt; lookup, Parameters params) {
+<span class="fc" id="L76">        BeanContainer beanContainer = lookup.select(BeanContainer.class).get();</span>
+        @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L78">        Bean&lt;Object&gt; ownBean = (Bean&lt;Object&gt;) beanContainer</span>
+<span class="fc" id="L79">                .resolve(beanContainer.getBeans(Object.class, params.get(IDENTIFIER, Annotation.class)));</span>
+<span class="fc" id="L80">        return create(ownBean, //</span>
+<span class="fc" id="L81">                Arrays.stream(params.get(BEANS_IDENTIFIER, Annotation[].class)) //</span>
+<span class="fc" id="L82">                        .map(lookup::select) //</span>
+<span class="fc" id="L83">                        .map(Instance::getHandle), //</span>
+<span class="fc" id="L84">                new Lookup() {</span>
+                    @Override
+                    public &lt;T&gt; T getReference(Class&lt;T&gt; type) throws IllegalArgumentException {
+<span class="fc" id="L87">                        Instance&lt;T&gt; instance = lookup.select(type);</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">                        if (!instance.isResolvable()) {</span>
+<span class="fc" id="L89">                            throw new IllegalArgumentException(&quot;No bean found for required type [&quot; + type + &quot;]&quot;);</span>
+                        }
+<span class="fc" id="L91">                        return instance.get();</span>
+                    }
+                });
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

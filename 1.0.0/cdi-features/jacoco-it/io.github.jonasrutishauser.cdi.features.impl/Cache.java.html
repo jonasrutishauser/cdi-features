@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Cache.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CDI Features</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features.impl</a> &gt; <span class="el_source">Cache.java</span></div><h1>Cache.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features.impl;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
+import java.util.function.ToLongFunction;
+
+import io.github.jonasrutishauser.cdi.features.NoSelectedFeatureException;
+import jakarta.enterprise.context.spi.Contextual;
+import jakarta.enterprise.inject.spi.Bean;
+
+<span class="fc" id="L15">class Cache {</span>
+
+<span class="fc" id="L17">    public enum Selection {</span>
+<span class="fc" id="L18">        SELECTED, NOT_SELECTED, REMAINING;</span>
+
+        public static Selection of(boolean selected) {
+<span class="fc bfc" id="L21" title="All 2 branches covered.">            return selected ? SELECTED : NOT_SELECTED;</span>
+        }
+    }
+
+<span class="fc" id="L25">    private final ConcurrentMap&lt;Contextual&lt;?&gt;, CacheEntry&gt; entries = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L26">    private final Clock clock = Clock.systemUTC();</span>
+
+    public &lt;T&gt; Bean&lt;?&gt; compute(Contextual&lt;T&gt; key, Collection&lt;Bean&lt;? extends T&gt;&gt; items,
+            Function&lt;Bean&lt;? extends T&gt;, Selection&gt; selection, ToLongFunction&lt;Bean&lt;? extends T&gt;&gt; cacheDurationInMillis) {
+<span class="fc" id="L30">        CacheEntry entry = entries.compute(key, (k, current) -&gt; {</span>
+<span class="fc bfc" id="L31" title="All 6 branches covered.">            if (current != null &amp;&amp; (current.forever || !current.validUntil.isBefore(Instant.now(clock)))) {</span>
+<span class="fc" id="L32">                return current;</span>
+            }
+<span class="fc" id="L34">            Bean&lt;? extends T&gt; remaining = null;</span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">            for (Bean&lt;? extends T&gt; item : items) {</span>
+<span class="fc" id="L36">                Selection selected = selection.apply(item);</span>
+<span class="fc bfc" id="L37" title="All 2 branches covered.">                if (selected == Selection.REMAINING) {</span>
+<span class="fc" id="L38">                    remaining = item;</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">                } else if (selected == Selection.SELECTED) {</span>
+<span class="fc" id="L40">                    return new CacheEntry(item, validUntil(cacheDurationInMillis.applyAsLong(item)));</span>
+                }
+<span class="fc" id="L42">            }</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">            if (remaining == null) {</span>
+<span class="fc" id="L44">                throw new NoSelectedFeatureException(k);</span>
+            }
+<span class="fc" id="L46">            return new CacheEntry(remaining, validUntil(cacheDurationInMillis.applyAsLong(remaining)));</span>
+        });
+<span class="fc bfc" id="L48" title="All 2 branches covered.">        if (entry.validUntil.isBefore(Instant.now(clock))) {</span>
+<span class="fc" id="L49">            entries.remove(key, entry);</span>
+        }
+<span class="fc" id="L51">        return entry.target;</span>
+    }
+
+    private Instant validUntil(long durationInMillis) {
+<span class="fc bfc" id="L55" title="All 2 branches covered.">        if (durationInMillis &lt; 0) {</span>
+<span class="fc" id="L56">            return Instant.MAX;</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        } else if (durationInMillis == 0) {</span>
+<span class="fc" id="L58">            return Instant.MIN;</span>
+        }
+<span class="fc" id="L60">        return Instant.now(clock).plusMillis(durationInMillis);</span>
+    }
+
+    private static class CacheEntry {
+        final Bean&lt;?&gt; target;
+        final Instant validUntil;
+        final boolean forever;
+
+<span class="fc" id="L68">        public CacheEntry(Bean&lt;?&gt; target, Instant validUntil) {</span>
+<span class="fc" id="L69">            this.target = target;</span>
+<span class="fc" id="L70">            this.validUntil = validUntil;</span>
+<span class="fc" id="L71">            this.forever = validUntil.equals(Instant.MAX);</span>
+<span class="fc" id="L72">        }</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
