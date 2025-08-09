@@ -28,7 +28,7 @@ class FeatureHolder&lt;T&gt; {
 <span class="fc" id="L28">    }</span>
 
     private synchronized void init() {
-<span class="pc bpc" id="L31" title="1 of 2 branches missed.">        if (instance == null) {</span>
+<span class="fc bfc" id="L31" title="All 2 branches covered.">        if (instance == null) {</span>
 <span class="fc" id="L32">            instance = contextual.create(creationalContext);</span>
 <span class="pc bpc" id="L33" title="1 of 2 branches missed.">            if (instances == null) {</span>
 <span class="nc" id="L34">                throw new IllegalStateException(&quot;featues should have been set from the callback&quot;);</span>

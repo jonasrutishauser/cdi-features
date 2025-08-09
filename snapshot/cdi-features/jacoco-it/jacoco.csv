@@ -8,11 +8,11 @@ CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesExtension,16,6
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureCreator,0,180,0,8,0,32,0,11,0,7
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesExtension.new TypeLiteral() {...},0,3,0,0,0,1,0,1,0,1
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,ConfigurationSelector,0,38,0,4,0,8,0,5,0,3
-CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureInstances,0,125,1,9,0,31,1,11,0,7
+CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureInstances,0,129,1,9,0,32,1,12,0,8
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureCreator.new FeatureCreator.Lookup() {...},0,29,0,2,0,5,0,3,0,2
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,Cache.CacheEntry,0,14,0,0,0,5,0,1,0,1
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeaturesBuildCompatibleExtension.ScopeStop,0,10,0,0,0,3,0,2,0,2
-CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureHolder,5,55,3,5,1,18,3,6,0,5
+CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureHolder,5,55,2,6,1,18,2,7,0,5
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureContext,8,95,3,7,2,24,3,12,0,10
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,ArcFeatureCreator,0,34,0,0,0,4,0,3,0,3
 CDI Features,io.github.jonasrutishauser.cdi.features.impl,FeatureInstances.new ContextualSelector.Context() {...},0,21,0,0,0,3,0,3,0,3
