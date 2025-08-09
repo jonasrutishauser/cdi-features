@@ -30,8 +30,12 @@ class FeatureInstances<T> {
     }
 
     public T selected(Contextual<T> contextual) {
-        return instances.get(cache.compute(contextual, selectors.keySet(), this::isSelected,
-                bean -> cacheDurationInMillis(contextual, bean))).get();
+        return instances.get(selectedBean(contextual)).get();
+    }
+
+    private synchronized Bean<?> selectedBean(Contextual<T> contextual) {
+        return cache.compute(contextual, selectors.keySet(), this::isSelected,
+                bean -> cacheDurationInMillis(contextual, bean));
     }
 
     static Optional<Feature> feature(Bean<?> bean) {

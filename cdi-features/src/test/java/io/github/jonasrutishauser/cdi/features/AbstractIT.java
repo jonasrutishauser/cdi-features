@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
@@ -120,10 +122,33 @@ public abstract class AbstractIT {
 
     @RepeatedTest(3)
     public void always() {
+        AlwaysFeature.counter.set(0); // reset counter
         @SuppressWarnings("serial")
         StringBuffer result = instance.select(new TypeLiteral<GenericSampleFeature<StringBuffer>>() {}).get().test();
 
-        assertEquals("always", result.toString());
+        assertEquals("always 0", result.toString());
+    }
+
+    @RepeatedTest(3)
+    public void concurrency() {
+        AlwaysFeature.counter.set(0); // reset counter
+        @SuppressWarnings("serial")
+        GenericSampleFeature<StringBuffer> feature = instance.select(new TypeLiteral<GenericSampleFeature<StringBuffer>>() {}).get();
+
+        CountDownLatch latch = new CountDownLatch(1);
+        for (int i = 0; i < 10; i++) {
+            new Thread(() -> {
+                try {
+                    latch.await();
+                    assertEquals("always 0", feature.test().toString());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
+        }
+        latch.countDown(); // release all threads
+
+        assertEquals("always 0", feature.test().toString());
     }
 
     @Test
@@ -207,9 +232,16 @@ public abstract class AbstractIT {
     @Dependent
     @Feature
     static class AlwaysFeature implements GenericSampleFeature<StringBuffer>, ThrowableSelector {
+        static AtomicInteger counter = new AtomicInteger();
+        private final int id;
+
+        public AlwaysFeature() {
+            this.id = counter.getAndIncrement();
+        }
+
         @Override
         public StringBuffer test() {
-            return new StringBuffer("always");
+            return new StringBuffer("always " + id);
         }
 
         @Override
