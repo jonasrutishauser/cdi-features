@@ -226,12 +226,11 @@ public class FeaturesExtension implements Extension {
 
     private <T> T createIntercepted(BeanManager beanManager, Type type, CreationalContext<Object> ctx,
             Set<Bean<? extends T>> value) {
-        @SuppressWarnings("unchecked")
-        Bean<T> ownBean = (Bean<T>) beanManager.resolve(beanManager.getBeans(type));
-        invokerFactory.addInstanceFactory(ownBean, creationContext -> getFeatureInstances(beanManager, type, creationContext, value));
         // register target beans
+        invokerFactory.addInstanceFactory(beanManager, type,
+                creationContext -> getFeatureInstances(beanManager, type, creationContext, value));
         @SuppressWarnings("unchecked")
-        InterceptionFactory<T> interceptionFactory = (InterceptionFactory<T>) beanManager.createInterceptionFactory(ctx,
+        InterceptionFactory<T> interceptionFactory = beanManager.createInterceptionFactory(ctx,
                 value.stream().filter(invokerFactory::isManagedBean).map(Bean::getBeanClass).map(Class.class::cast)
                         .findFirst().orElseGet(() -> toClass(type)));
         interceptionFactory.configure().add(FeatureSelector.Literal.INSTANCE);
@@ -330,6 +329,7 @@ public class FeaturesExtension implements Extension {
 
     private static class FeatureInvokerFactory {
         private Map<Bean<?>, InstancesFactory<?>> instancesFactory = new ConcurrentHashMap<>();
+        private Set<Type> registeredTypes = ConcurrentHashMap.newKeySet();
         private Set<Bean<?>> managedBeans = ConcurrentHashMap.newKeySet();
 
         public <T> void processFeatureBean(ProcessBean<T> event) {
@@ -342,8 +342,10 @@ public class FeaturesExtension implements Extension {
             return managedBeans.contains(bean);
         }
 
-        public <T> void addInstanceFactory(Bean<T> bean, InstancesFactory<T> factory) {
-            instancesFactory.putIfAbsent(bean, factory);
+        public <T> void addInstanceFactory(BeanManager beanManager, Type type, InstancesFactory<T> factory) {
+            if (registeredTypes.add(type)) {
+                instancesFactory.putIfAbsent(beanManager.resolve(beanManager.getBeans(type)), factory);
+            }
         }
 
         public <T> FeatureInvoker<T> createInvoker(CreationalContext<FeatureInterceptor> ctx, Bean<T> targetBean,

@@ -20,8 +20,8 @@ class FeatureInvoker<T> extends FeatureInstances<T> {
             Map<Bean<? extends T>, ContextualSelector<? super T>> selectors, Cache cache) {
         super(instances, selectors, cache);
         this.targetBean = targetBean;
-        Type type = getType(targetBean);
-        this.type = (Class<?>) (type instanceof Class ? type : ((ParameterizedType) type).getRawType());
+        Type targetType = getType(targetBean);
+        this.type = (Class<?>) (targetType instanceof Class ? targetType : ((ParameterizedType) targetType).getRawType());
     }
 
     public Object invoke(Method method, Object[] parameters) throws Throwable {

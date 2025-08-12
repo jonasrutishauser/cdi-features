@@ -13,7 +13,7 @@ import jakarta.interceptor.InterceptorBinding;
 @Retention(RUNTIME)
 @InterceptorBinding
 @interface FeatureSelector {
-    public final static class Literal extends AnnotationLiteral<FeatureSelector> implements FeatureSelector {
+    public static final class Literal extends AnnotationLiteral<FeatureSelector> implements FeatureSelector {
         public static final Literal INSTANCE = new Literal();
 
         private static final long serialVersionUID = 1L;

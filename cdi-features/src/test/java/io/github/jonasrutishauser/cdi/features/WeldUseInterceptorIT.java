@@ -37,7 +37,7 @@ class WeldUseInterceptorIT extends AbstractIT {
     }
 
     @RepeatedTest(3)
-    public void delegatesScope() {
+    void delegatesScope() {
         AlwaysFeature.counter.set(0); // reset counter
         @SuppressWarnings("serial")
         Instance<GenericSampleFeature<StringBuffer>> select = instance.select(new TypeLiteral<GenericSampleFeature<StringBuffer>>() {});

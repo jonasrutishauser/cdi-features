@@ -27,7 +27,7 @@ class FeatureInterceptor {
         return targetBean;
     }
 
-    <T> void setInvoker(FeatureInvoker<?> invoker) {
+    void setInvoker(FeatureInvoker<?> invoker) {
         this.invoker = invoker;
     }
 
