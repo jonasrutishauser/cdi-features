@@ -19,6 +19,7 @@ import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Dependent;
 import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.Produces;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.util.TypeLiteral;
 import jakarta.inject.Inject;
@@ -313,20 +314,22 @@ public abstract class AbstractIT {
         }
     }
 
-    @ApplicationScoped
-    @Feature(propertyKey = "feature", propertyValue = "3", cache = @Cache(durationMillis = 0, durationMillisProperty = "not.defined.property"))
-    static class SampleFeature3 implements SampleFeature {
-        SampleFeature3() {
-        }
+    @Dependent
+    static class SampleFeature3 {
+
+        private final Config config;
 
         @Inject
-        SampleFeature3(Config config) {
-            config.setFeature3Created();
+        public SampleFeature3(Config config) {
+            this.config = config;
         }
 
-        @Override
-        public String test() {
-            return "SampleFeature3";
+        @ApplicationScoped
+        @Feature(propertyKey = "feature", propertyValue = "3", cache = @Cache(durationMillis = 0, durationMillisProperty = "not.defined.property"))
+        @Produces
+        SampleFeature create() {
+            config.setFeature3Created();
+            return () -> "SampleFeature3";
         }
     }
 
