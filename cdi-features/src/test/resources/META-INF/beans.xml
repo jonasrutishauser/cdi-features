@@ -3,4 +3,10 @@
 	xmlns="https://jakarta.ee/xml/ns/jakartaee"
 	xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/beans_3_0.xsd"
 	version="3.0" bean-discovery-mode="annotated">
+	<scan>
+		<exclude name="io.github.jonasrutishauser.cdi.features.impl.*"></exclude>
+		<exclude name="io.github.jonasrutishauser.cdi.features.WeldIT$Initializer">
+			<if-class-not-available name="jakarta.enterprise.inject.build.compatible.spi.BuildServices"/>
+		</exclude>
+	</scan>
 </beans>
