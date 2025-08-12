@@ -7,6 +7,7 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -32,7 +34,14 @@ import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.enterprise.inject.spi.BeforeBeanDiscovery;
 import jakarta.enterprise.inject.spi.BeforeShutdown;
 import jakarta.enterprise.inject.spi.Extension;
+import jakarta.enterprise.inject.spi.InjectionPoint;
+import jakarta.enterprise.inject.spi.InjectionTarget;
+import jakarta.enterprise.inject.spi.InterceptionFactory;
 import jakarta.enterprise.inject.spi.ProcessBean;
+import jakarta.enterprise.inject.spi.ProcessInjectionTarget;
+import jakarta.enterprise.inject.spi.ProcessManagedBean;
+import jakarta.enterprise.inject.spi.configurator.BeanConfigurator;
+import jakarta.enterprise.invoke.Invoker;
 import jakarta.enterprise.util.TypeLiteral;
 
 public class FeaturesExtension implements Extension {
@@ -41,9 +50,21 @@ public class FeaturesExtension implements Extension {
         private static final long serialVersionUID = 1L;
     }.getType();
 
+    private final FeatureInvokerFactory invokerFactory = createInvokerFactory();
+
+    private FeatureInvokerFactory createInvokerFactory() {
+        try {
+            return new FeatureInvokerInvokerFactory();
+        } catch (NoClassDefFoundError e) {
+            return new FeatureInvokerFactory();
+        }
+    }
+
     private final FeatureContext context = new FeatureContext();
 
     private final Set<Bean<?>> featureBeans = new HashSet<>();
+
+    private final boolean useInterceptor = Boolean.getBoolean("io.github.jonasrutishauser.cdi.features.useInterceptor");
 
     private boolean mpConfigAvailable;
 
@@ -67,7 +88,46 @@ public class FeaturesExtension implements Extension {
         if (feature.isPresent()) {
             validate(feature.get(), bean.getBean(), beanManager, bean::addDefinitionError);
             featureBeans.add(bean.getBean());
+            if (useInterceptor) {
+                invokerFactory.processFeatureBean(bean);
+            }
         }
+    }
+
+    void configureFeatureInvoker(@Observes ProcessInjectionTarget<FeatureInterceptor> event, BeanManager beanManager) {
+        InjectionTarget<FeatureInterceptor> delegate = event.getInjectionTarget();
+        event.setInjectionTarget(new InjectionTarget<FeatureInterceptor>() {
+            @Override
+            public void inject(FeatureInterceptor instance, CreationalContext<FeatureInterceptor> ctx) {
+                delegate.inject(instance, ctx);
+                instance.setInvoker(invokerFactory.createInvoker(ctx, instance.getTargetBean(), beanManager));
+            }
+
+            @Override
+            public void postConstruct(FeatureInterceptor instance) {
+                delegate.postConstruct(instance);
+            }
+
+            @Override
+            public void preDestroy(FeatureInterceptor instance) {
+                delegate.preDestroy(instance);
+            }
+
+            @Override
+            public FeatureInterceptor produce(CreationalContext<FeatureInterceptor> ctx) {
+                return delegate.produce(ctx);
+            }
+
+            @Override
+            public void dispose(FeatureInterceptor instance) {
+                delegate.dispose(instance);
+            }
+
+            @Override
+            public Set<InjectionPoint> getInjectionPoints() {
+                return delegate.getInjectionPoints();
+            }
+        });
     }
 
     private void validate(Feature feature, Bean<?> bean, BeanManager beanManager, Consumer<Throwable> definitionError) {
@@ -136,10 +196,15 @@ public class FeaturesExtension implements Extension {
     void registerFeatureSelectorBeans(@Priority(LIBRARY_AFTER + 500) @Observes AfterBeanDiscovery abd, BeanManager beanManager) {
         for (Entry<Type, Set<Bean<?>>> feature : getFeatures().entrySet()) {
             if (beanManager.getBeans(feature.getKey()).isEmpty()) {
-                abd.addBean() //
-                        .types(feature.getKey()) //
-                        .scope(FeatureScoped.class) //
-                        .createWith(ctx -> createDummy(beanManager, feature.getKey(), ctx, feature.getValue()));
+                BeanConfigurator<Object> configurator = abd.addBean().types(feature.getKey());
+                if (useInterceptor) {
+                    configurator.createWith(
+                            ctx -> createIntercepted(beanManager, feature.getKey(), ctx, feature.getValue()));
+                } else {
+                    configurator //
+                            .scope(FeatureScoped.class) //
+                            .createWith(ctx -> createDummy(beanManager, feature.getKey(), ctx, feature.getValue()));
+                }
             }
         }
     }
@@ -159,6 +224,19 @@ public class FeaturesExtension implements Extension {
         return features;
     }
 
+    private <T> T createIntercepted(BeanManager beanManager, Type type, CreationalContext<Object> ctx,
+            Set<Bean<? extends T>> value) {
+        // register target beans
+        invokerFactory.addInstanceFactory(beanManager, type,
+                creationContext -> getFeatureInstances(beanManager, type, creationContext, value));
+        @SuppressWarnings("unchecked")
+        InterceptionFactory<T> interceptionFactory = beanManager.createInterceptionFactory(ctx,
+                value.stream().filter(invokerFactory::isManagedBean).map(Bean::getBeanClass).map(Class.class::cast)
+                        .findFirst().orElseGet(() -> toClass(type)));
+        interceptionFactory.configure().add(FeatureSelector.Literal.INSTANCE);
+        return interceptionFactory.createInterceptedInstance(null);
+    }
+
     private <T> T createDummy(BeanManager beanManager, Type type, CreationalContext<Object> ctx,
             Set<Bean<? extends T>> features) {
         Map<Bean<? extends T>, Supplier<T>> instances = getFeatureInstances(beanManager, type, ctx, features);
@@ -169,13 +247,13 @@ public class FeaturesExtension implements Extension {
         return instances.values().iterator().next().get();
     }
 
-    private Cache getCache(BeanManager beanManager, CreationalContext<Object> ctx) {
+    private static Cache getCache(BeanManager beanManager, CreationalContext<?> ctx) {
         return (Cache) beanManager.getReference(beanManager.resolve(beanManager.getBeans(Cache.class)), Cache.class,
                 ctx);
     }
 
     private static <T> Map<Bean<? extends T>, Supplier<T>> getFeatureInstances(BeanManager beanManager, Type type,
-            CreationalContext<Object> ctx, Set<Bean<? extends T>> features) {
+            CreationalContext<?> ctx, Set<Bean<? extends T>> features) {
         return features.stream().collect(toMap(identity(), bean -> {
             @SuppressWarnings("unchecked")
             T instance = (T) beanManager.getReference(bean, type, ctx);
@@ -183,8 +261,8 @@ public class FeaturesExtension implements Extension {
         }));
     }
 
-    private static <T> Map<Bean<? extends T>, ContextualSelector<? super T>> getSelectors(BeanManager beanManager, CreationalContext<Object> ctx,
-            Map<Bean<? extends T>, Supplier<T>> instances) {
+    private static <T> Map<Bean<? extends T>, ContextualSelector<? super T>> getSelectors(BeanManager beanManager,
+            CreationalContext<?> ctx, Map<Bean<? extends T>, Supplier<T>> instances) {
         Map<Bean<? extends T>, ContextualSelector<? super T>> selectors = new HashMap<>();
         for (Entry<Bean<? extends T>, Supplier<T>> instance : instances.entrySet()) {
             Feature feature = feature(instance.getKey()).orElseThrow();
@@ -242,6 +320,74 @@ public class FeaturesExtension implements Extension {
 
     void stopContext(@Observes BeforeShutdown bs) {
         context.stop();
+    }
+
+    @FunctionalInterface
+    private interface InstancesFactory<T> {
+        Map<Bean<? extends T>, Supplier<T>> create(CreationalContext<?> ctx);
+    }
+
+    private static class FeatureInvokerFactory {
+        private Map<Bean<?>, InstancesFactory<?>> instancesFactory = new ConcurrentHashMap<>();
+        private Set<Type> registeredTypes = ConcurrentHashMap.newKeySet();
+        private Set<Bean<?>> managedBeans = ConcurrentHashMap.newKeySet();
+
+        public <T> void processFeatureBean(ProcessBean<T> event) {
+            if (event instanceof ProcessManagedBean<T>) {
+                managedBeans.add(event.getBean());
+            }
+        }
+
+        public boolean isManagedBean(Bean<?> bean) {
+            return managedBeans.contains(bean);
+        }
+
+        public <T> void addInstanceFactory(BeanManager beanManager, Type type, InstancesFactory<T> factory) {
+            if (registeredTypes.add(type)) {
+                instancesFactory.putIfAbsent(beanManager.resolve(beanManager.getBeans(type)), factory);
+            }
+        }
+
+        public <T> FeatureInvoker<T> createInvoker(CreationalContext<FeatureInterceptor> ctx, Bean<T> targetBean,
+                BeanManager beanManager) {
+            Map<Bean<? extends T>, Supplier<T>> instances = getInstances(ctx, targetBean);
+            return new FeatureInvoker<>(targetBean, instances, getSelectors(beanManager, ctx, instances),
+                    getCache(beanManager, ctx));
+        }
+
+        @SuppressWarnings("unchecked")
+        protected <T> Map<Bean<? extends T>, Supplier<T>> getInstances(CreationalContext<FeatureInterceptor> ctx,
+                Bean<T> targetBean) {
+            return ((InstancesFactory<T>) instancesFactory.get(targetBean)).create(ctx);
+        }
+    }
+
+    private static class FeatureInvokerInvokerFactory extends FeatureInvokerFactory {
+        private Map<Bean<?>, Map<Method, ? extends Invoker<?, ?>>> invokers = new HashMap<>();
+
+        public FeatureInvokerInvokerFactory() {
+            Invoker.class.getName(); // ensure that the Invoker class is available
+        }
+
+        @Override
+        public <T> void processFeatureBean(ProcessBean<T> event) {
+            super.processFeatureBean(event);
+            if (event instanceof ProcessManagedBean<T> processManagedBean) {
+                Map<Method, Invoker<?, ?>> beanInvokers = new ConcurrentHashMap<>();
+                processManagedBean.getAnnotatedBeanClass().getMethods().stream().filter(method -> !method.isStatic())
+                        .forEach(method -> beanInvokers.put(method.getJavaMember(),
+                                processManagedBean.createInvoker(method).build()));
+                invokers.put(processManagedBean.getBean(), beanInvokers);
+            }
+        }
+
+        @Override
+        public <T> FeatureInvoker<T> createInvoker(CreationalContext<FeatureInterceptor> ctx, Bean<T> targetBean,
+                BeanManager beanManager) {
+            Map<Bean<? extends T>, Supplier<T>> instances = getInstances(ctx, targetBean);
+            return new FeatureInvokerInvoker<>(targetBean, instances, getSelectors(beanManager, ctx, instances),
+                    getCache(beanManager, ctx), invokers);
+        }
     }
 
 }

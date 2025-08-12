@@ -1,19 +1,18 @@
 package io.github.jonasrutishauser.cdi.features;
 
-import org.jboss.weld.junit5.auto.AddExtensions;
-import org.jboss.weld.junit5.auto.AddPackages;
-import org.jboss.weld.junit5.auto.EnableAutoWeld;
+import org.jboss.weld.junit5.EnableWeld;
+import org.jboss.weld.junit5.WeldInitiator;
+import org.jboss.weld.junit5.WeldSetup;
 import org.jboss.weld.lite.extension.translator.BuildServicesImpl;
 import org.junit.jupiter.api.BeforeAll;
 
-import io.github.jonasrutishauser.cdi.features.impl.FeaturesExtension;
-import io.smallrye.config.inject.ConfigExtension;
 import jakarta.enterprise.inject.build.compatible.spi.BuildServicesResolver;
 
-@EnableAutoWeld
-@AddExtensions({FeaturesExtension.class, ConfigExtension.class})
-@AddPackages(WeldIT.class)
+@EnableWeld
 class WeldIT extends AbstractIT {
+
+    @WeldSetup
+    public WeldInitiator weld = WeldInitiator.performDefaultDiscovery();
 
     @BeforeAll
     static void setWeldBuildServices() {
@@ -24,7 +23,7 @@ class WeldIT extends AbstractIT {
         }
     }
 
-    static class Initializer {
+    static interface Initializer {
         static void setWeldBuildServices() {
             BuildServicesResolver.setBuildServices(new BuildServicesImpl());
         }
