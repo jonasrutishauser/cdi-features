@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.SetSystemProperty;
 
 import io.github.jonasrutishauser.cdi.features.Feature.Cache;
+import io.github.jonasrutishauser.cdi.features.impl.Accessor;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Dependent;
@@ -29,7 +30,7 @@ import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.util.TypeLiteral;
 import jakarta.inject.Inject;
 
-public abstract class AbstractIT {
+public abstract class AbstractIT extends Accessor {
 
     @Inject
     Config config;
@@ -38,7 +39,10 @@ public abstract class AbstractIT {
     SampleFeature sampleFeature;
 
     @Inject
-    Instance<Object> instance;
+    NotAFeature notAFeature;
+
+    @Inject
+    Instance<GenericSampleFeature<?>> instance;
 
     protected void setSelected(int selected) {
         config.setSelected(selected);
@@ -163,7 +167,7 @@ public abstract class AbstractIT {
 
     @Test
     public void defaultScoped() throws IOException {
-        CharSequence result = instance.select(NotAFeature.class).get().test();
+        CharSequence result = notAFeature.test();
 
         assertEquals("default", result);
     }
@@ -233,7 +237,7 @@ public abstract class AbstractIT {
         T test() throws IOException;
     }
 
-    private abstract static class Intermediate implements GenericSampleFeature<String> {}
+    abstract static class Intermediate implements GenericSampleFeature<String> {}
 
     abstract static class SampleFeature extends Intermediate {}
 
@@ -298,7 +302,7 @@ public abstract class AbstractIT {
     static class OnlyProducerFeature {
         @Produces
         @Feature(remaining = true)
-        private GenericSampleFeature<Segment> feature = () -> new Segment("OnlyProducer".toCharArray(), 0, 4);
+        GenericSampleFeature<Segment> feature = () -> new Segment("OnlyProducer".toCharArray(), 0, 4);
     }
 
     @Dependent
@@ -392,7 +396,7 @@ public abstract class AbstractIT {
         @ApplicationScoped
         @Feature(propertyKey = "feature4")
         @Produces
-        private final SampleFeature feature = new SampleFeature() {
+        final SampleFeature feature = new SampleFeature() {
             public String test() {
                 return "SampleFeature4";
             }

@@ -8,8 +8,9 @@ import java.util.function.Supplier;
 import io.github.jonasrutishauser.cdi.features.ContextualSelector;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.invoke.Invoker;
+import jakarta.interceptor.InvocationContext;
 
-public class FeatureInvokerInvoker<T> extends FeatureInvoker<T> {
+class FeatureInvokerInvoker<T> extends FeatureInvoker<T> {
 
     private Map<Bean<?>, Map<Method, ? extends Invoker<?, ?>>> invokers;
 
@@ -21,10 +22,11 @@ public class FeatureInvokerInvoker<T> extends FeatureInvoker<T> {
     }
 
     @Override
-    protected Object invoke(Method method, Object[] parameters, Bean<?> selectedBean) throws Throwable {
+    protected Object invoke(InvocationContext context, Bean<?> selectedBean, T target) throws Exception {
         @SuppressWarnings("unchecked")
         Map<Method, Invoker<T, ?>> selectedInvokers = (Map<Method, Invoker<T, ?>>) invokers.get(selectedBean);
         if (selectedInvokers != null) {
+            Method method = context.getMethod();
             Invoker<T, ?> invoker = selectedInvokers.get(method);
             if (invoker == null) {
                 invoker = selectedInvokers.entrySet().stream() //
@@ -35,9 +37,9 @@ public class FeatureInvokerInvoker<T> extends FeatureInvoker<T> {
                         .findFirst() //
                         .orElseThrow(() -> new IllegalStateException("No method found: " + method));
             }
-            return invoker.invoke(instances.get(selectedBean).get(), parameters);
+            return invoker.invoke(target, context.getParameters());
         }
-        return super.invoke(method, parameters, selectedBean);
+        return super.invoke(context, selectedBean, target);
     }
 
 }

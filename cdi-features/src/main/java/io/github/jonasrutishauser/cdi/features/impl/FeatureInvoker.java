@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 
 import io.github.jonasrutishauser.cdi.features.ContextualSelector;
 import jakarta.enterprise.inject.spi.Bean;
+import jakarta.interceptor.InvocationContext;
 
 class FeatureInvoker<T> extends FeatureInstances<T> {
     protected final Bean<T> targetBean;
@@ -24,18 +25,27 @@ class FeatureInvoker<T> extends FeatureInstances<T> {
         this.type = (Class<?>) (targetType instanceof Class ? targetType : ((ParameterizedType) targetType).getRawType());
     }
 
-    public Object invoke(Method method, Object[] parameters) throws Throwable {
+    public Object invoke(InvocationContext context) throws Exception {
         Bean<?> selectedBean = selectedBean(targetBean);
-        return invoke(method, parameters, selectedBean);
+        return invoke(context, selectedBean, instances.get(selectedBean).get());
     }
 
-    protected Object invoke(Method method, Object[] parameters, Bean<?> selectedBean) throws Throwable {
-        Method resolvedMethod = map(method);
+    /**
+     * @param selectedBean used in overriding class
+     */
+    protected Object invoke(InvocationContext context, Bean<?> selectedBean, T target) throws Exception {
+        Method resolvedMethod = map(context.getMethod());
         resolvedMethod.setAccessible(true);
         try {
-            return resolvedMethod.invoke(instances.get(selectedBean).get(), parameters);
+            return resolvedMethod.invoke(target, context.getParameters());
         } catch (InvocationTargetException e) {
-            throw e.getCause();
+            if (e.getCause() instanceof Error error) {
+                throw error;
+            }
+            if (e.getCause() instanceof Exception exception) {
+                throw exception;
+            }
+            throw e;
         }
     }
 

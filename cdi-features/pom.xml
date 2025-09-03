@@ -107,6 +107,9 @@
 					<summaryFiles>
 						<summaryFile>${project.build.directory}/failsafe-reports/failsafe-without-microprofile-config-summary.xml</summaryFile>
 					</summaryFiles>
+					<classpathDependencyExcludes>
+						<exclude>io.quarkus:quarkus-core</exclude>
+					</classpathDependencyExcludes>
 				</configuration>
 			</plugin>
 			<plugin>

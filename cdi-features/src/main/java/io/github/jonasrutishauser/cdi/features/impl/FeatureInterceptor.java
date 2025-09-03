@@ -15,12 +15,15 @@ import jakarta.interceptor.InvocationContext;
 @FeatureSelector
 class FeatureInterceptor {
 
+    static final ThreadLocal<FeatureInterceptor> CURRENT = new ThreadLocal<>();
+
     private final Bean<?> targetBean;
     private FeatureInvoker<?> invoker;
 
     @Inject
     FeatureInterceptor(@Intercepted Bean<?> targetBean) {
         this.targetBean = targetBean;
+        CURRENT.set(this);
     }
 
     Bean<?> getTargetBean() {
@@ -29,11 +32,12 @@ class FeatureInterceptor {
 
     void setInvoker(FeatureInvoker<?> invoker) {
         this.invoker = invoker;
+        CURRENT.remove();
     }
 
     @AroundInvoke
-    Object intercept(InvocationContext context) throws Throwable {
-        return invoker.invoke(context.getMethod(), context.getParameters());
+    Object intercept(InvocationContext context) throws Exception {
+        return invoker.invoke(context);
     }
 
 }
