@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FeatureInvoker.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CDI Features</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features.impl</a> &gt; <span class="el_source">FeatureInvoker.java</span></div><h1>FeatureInvoker.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features.impl;
+
+import static io.github.jonasrutishauser.cdi.features.NoSelectedFeatureException.getType;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.Map;
+import java.util.function.Supplier;
+
+import io.github.jonasrutishauser.cdi.features.ContextualSelector;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.interceptor.InvocationContext;
+
+class FeatureInvoker&lt;T&gt; extends FeatureInstances&lt;T&gt; {
+    protected final Bean&lt;T&gt; targetBean;
+    private final Class&lt;?&gt; type;
+
+    public FeatureInvoker(Bean&lt;T&gt; targetBean, Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances,
+            Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; selectors, Cache cache) {
+<span class="fc" id="L22">        super(instances, selectors, cache);</span>
+<span class="fc" id="L23">        this.targetBean = targetBean;</span>
+<span class="fc" id="L24">        Type targetType = getType(targetBean);</span>
+<span class="fc bfc" id="L25" title="All 2 branches covered.">        this.type = (Class&lt;?&gt;) (targetType instanceof Class ? targetType : ((ParameterizedType) targetType).getRawType());</span>
+<span class="fc" id="L26">    }</span>
+
+    public Object invoke(InvocationContext context) throws Exception {
+<span class="fc" id="L29">        Bean&lt;?&gt; selectedBean = selectedBean(targetBean);</span>
+<span class="fc" id="L30">        return invoke(context, selectedBean, instances.get(selectedBean).get());</span>
+    }
+
+    /**
+     * @param selectedBean used in overriding class
+     */
+    protected Object invoke(InvocationContext context, Bean&lt;?&gt; selectedBean, T target) throws Exception {
+<span class="fc" id="L37">        Method resolvedMethod = map(context.getMethod());</span>
+<span class="fc" id="L38">        resolvedMethod.setAccessible(true);</span>
+        try {
+<span class="fc" id="L40">            return resolvedMethod.invoke(target, context.getParameters());</span>
+<span class="fc" id="L41">        } catch (InvocationTargetException e) {</span>
+<span class="pc bpc" id="L42" title="1 of 2 branches missed.">            if (e.getCause() instanceof Error error) {</span>
+<span class="nc" id="L43">                throw error;</span>
+            }
+<span class="pc bpc" id="L45" title="1 of 2 branches missed.">            if (e.getCause() instanceof Exception exception) {</span>
+<span class="fc" id="L46">                throw exception;</span>
+            }
+<span class="nc" id="L48">            throw e;</span>
+        }
+    }
+
+    private Method map(Method method) {
+<span class="fc bfc" id="L53" title="All 2 branches covered.">        if (method.getDeclaringClass().isAssignableFrom(type)) {</span>
+<span class="fc" id="L54">            return method;</span>
+        }
+        try {
+<span class="fc" id="L57">            return getDeclaredMethod(method, type);</span>
+<span class="fc" id="L58">        } catch (NoSuchMethodException e) {</span>
+<span class="fc" id="L59">            throw new IllegalStateException(&quot;No method found: &quot; + method);</span>
+        }
+    }
+
+    private Method getDeclaredMethod(Method method, Class&lt;?&gt; clazz) throws NoSuchMethodException {
+        try {
+<span class="fc" id="L65">            return clazz.getDeclaredMethod(method.getName(), method.getParameterTypes());</span>
+<span class="fc" id="L66">        } catch (NoSuchMethodException e) {</span>
+            // continue searching in superclasses
+        }
+<span class="fc bfc" id="L69" title="All 2 branches covered.">        for (Class&lt;?&gt; iface : clazz.getInterfaces()) {</span>
+            try {
+<span class="fc" id="L71">                return getDeclaredMethod(method, iface);</span>
+<span class="fc" id="L72">            } catch (NoSuchMethodException e) {</span>
+                // continue searching in interfaces
+            }
+        }
+<span class="fc bfc" id="L76" title="All 2 branches covered.">        if (clazz.getSuperclass() != null) {</span>
+<span class="fc" id="L77">            return getDeclaredMethod(method, clazz.getSuperclass());</span>
+        }
+<span class="fc" id="L79">        throw new NoSuchMethodException(&quot;No method found&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

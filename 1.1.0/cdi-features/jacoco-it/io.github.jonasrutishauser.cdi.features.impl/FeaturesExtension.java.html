@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FeaturesExtension.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CDI Features</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features.impl</a> &gt; <span class="el_source">FeaturesExtension.java</span></div><h1>FeaturesExtension.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features.impl;
+
+import static io.github.jonasrutishauser.cdi.features.impl.FeatureInstances.feature;
+import static io.github.jonasrutishauser.cdi.features.impl.FeatureInstances.isDefined;
+import static jakarta.interceptor.Interceptor.Priority.LIBRARY_AFTER;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import io.github.jonasrutishauser.cdi.features.ContextualSelector;
+import io.github.jonasrutishauser.cdi.features.Feature;
+import io.github.jonasrutishauser.cdi.features.Selector;
+import io.github.jonasrutishauser.cdi.features.ThrowableSelector;
+import jakarta.annotation.Priority;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.spi.CreationalContext;
+import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.inject.spi.AfterBeanDiscovery;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.enterprise.inject.spi.BeanManager;
+import jakarta.enterprise.inject.spi.BeforeBeanDiscovery;
+import jakarta.enterprise.inject.spi.BeforeShutdown;
+import jakarta.enterprise.inject.spi.Extension;
+import jakarta.enterprise.inject.spi.InjectionPoint;
+import jakarta.enterprise.inject.spi.InjectionTarget;
+import jakarta.enterprise.inject.spi.InterceptionFactory;
+import jakarta.enterprise.inject.spi.ProcessBean;
+import jakarta.enterprise.inject.spi.ProcessInjectionTarget;
+import jakarta.enterprise.inject.spi.ProcessManagedBean;
+import jakarta.enterprise.inject.spi.configurator.BeanConfigurator;
+import jakarta.enterprise.invoke.Invoker;
+import jakarta.enterprise.util.TypeLiteral;
+
+<span class="fc" id="L47">public class FeaturesExtension implements Extension {</span>
+
+<span class="fc" id="L49">    private static final Type GENERIC_CONTEXTUAL_SELECTOR_TYPE = new TypeLiteral&lt;ContextualSelector&lt;?&gt;&gt;() {</span>
+        private static final long serialVersionUID = 1L;
+<span class="fc" id="L51">    }.getType();</span>
+
+<span class="fc" id="L53">    private final FeatureInvokerFactory invokerFactory = createInvokerFactory();</span>
+
+    private FeatureInvokerFactory createInvokerFactory() {
+        try {
+<span class="fc" id="L57">            return new FeatureInvokerInvokerFactory();</span>
+<span class="fc" id="L58">        } catch (NoClassDefFoundError e) {</span>
+<span class="fc" id="L59">            return new FeatureInvokerFactory();</span>
+        }
+    }
+
+<span class="fc" id="L63">    private final FeatureContext context = new FeatureContext();</span>
+
+<span class="fc" id="L65">    private final Set&lt;Bean&lt;?&gt;&gt; featureBeans = new HashSet&lt;&gt;();</span>
+
+<span class="fc" id="L67">    private final boolean useInterceptor = Boolean.getBoolean(&quot;io.github.jonasrutishauser.cdi.features.useInterceptor&quot;);</span>
+
+    private boolean mpConfigAvailable;
+
+    void registerScope(@Observes BeforeBeanDiscovery bbd) {
+<span class="fc" id="L72">        bbd.addScope(FeatureScoped.class, true, false);</span>
+<span class="fc" id="L73">    }</span>
+
+    void registerAnnotatedType(@Observes BeforeBeanDiscovery bbd) {
+<span class="fc" id="L76">        bbd.addAnnotatedType(Cache.class, Cache.class.getName()).add(ApplicationScoped.Literal.INSTANCE);</span>
+        try {
+<span class="fc" id="L78">            Class.forName(&quot;org.eclipse.microprofile.config.Config&quot;, false, getClass().getClassLoader());</span>
+<span class="fc" id="L79">            bbd.addAnnotatedType(ConfigurationSelector.class, ConfigurationSelector.class.getName());</span>
+<span class="fc" id="L80">            mpConfigAvailable = true;</span>
+<span class="fc" id="L81">        } catch (ClassNotFoundException e) {</span>
+            // ignore
+<span class="fc" id="L83">        }</span>
+<span class="fc" id="L84">    }</span>
+
+    void discoverFeatures(@Observes ProcessBean&lt;?&gt; bean, BeanManager beanManager) {
+<span class="fc" id="L87">        Optional&lt;Feature&gt; feature = feature(bean.getBean());</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">        if (feature.isPresent()) {</span>
+<span class="fc" id="L89">            validate(feature.get(), bean.getBean(), beanManager, bean::addDefinitionError);</span>
+<span class="fc" id="L90">            featureBeans.add(bean.getBean());</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">            if (useInterceptor) {</span>
+<span class="fc" id="L92">                invokerFactory.processFeatureBean(bean);</span>
+            }
+        }
+<span class="fc" id="L95">    }</span>
+
+    void configureFeatureInvoker(@Observes ProcessInjectionTarget&lt;FeatureInterceptor&gt; event, BeanManager beanManager) {
+<span class="fc" id="L98">        InjectionTarget&lt;FeatureInterceptor&gt; delegate = event.getInjectionTarget();</span>
+<span class="fc" id="L99">        event.setInjectionTarget(new InjectionTarget&lt;FeatureInterceptor&gt;() {</span>
+            @Override
+            public void inject(FeatureInterceptor instance, CreationalContext&lt;FeatureInterceptor&gt; ctx) {
+<span class="fc" id="L102">                delegate.inject(instance, ctx);</span>
+<span class="fc" id="L103">                instance.setInvoker(invokerFactory.createInvoker(ctx, instance.getTargetBean(), beanManager));</span>
+<span class="fc" id="L104">            }</span>
+
+            @Override
+            public void postConstruct(FeatureInterceptor instance) {
+<span class="fc" id="L108">                delegate.postConstruct(instance);</span>
+<span class="fc" id="L109">            }</span>
+
+            @Override
+            public void preDestroy(FeatureInterceptor instance) {
+<span class="fc" id="L113">                delegate.preDestroy(instance);</span>
+<span class="fc" id="L114">            }</span>
+
+            @Override
+            public FeatureInterceptor produce(CreationalContext&lt;FeatureInterceptor&gt; ctx) {
+<span class="fc" id="L118">                return delegate.produce(ctx);</span>
+            }
+
+            @Override
+            public void dispose(FeatureInterceptor instance) {
+<span class="fc" id="L123">                delegate.dispose(instance);</span>
+<span class="fc" id="L124">            }</span>
+
+            @Override
+            public Set&lt;InjectionPoint&gt; getInjectionPoints() {
+<span class="fc" id="L128">                return delegate.getInjectionPoints();</span>
+            }
+        });
+<span class="fc" id="L131">    }</span>
+
+    private void validate(Feature feature, Bean&lt;?&gt; bean, BeanManager beanManager, Consumer&lt;Throwable&gt; definitionError) {
+<span class="fc bfc" id="L134" title="All 2 branches covered.">        if (feature.remaining()) {</span>
+<span class="fc bfc" id="L135" title="All 2 branches covered.">            if (hasDefinedSelector(feature)) {</span>
+<span class="fc" id="L136">                definitionError.accept(</span>
+                        new IllegalStateException(&quot;selector must not be set if remaining is true on bean &quot; + bean));
+            }
+<span class="fc bfc" id="L139" title="All 2 branches covered.">            if (isDefined(feature.propertyKey())) {</span>
+<span class="fc" id="L140">                definitionError.accept(</span>
+                        new IllegalStateException(&quot;propertyKey must not be set if remaining is true on bean &quot; + bean));
+            }
+<span class="fc bfc" id="L143" title="All 2 branches covered.">        } else if (hasDefinedSelector(feature)) {</span>
+<span class="fc bfc" id="L144" title="All 2 branches covered.">            if (isDefined(feature.propertyKey())) {</span>
+<span class="fc" id="L145">                definitionError.accept(</span>
+                        new IllegalStateException(&quot;propertyKey must not be set if selector is set on bean &quot; + bean));
+            }
+<span class="fc" id="L148">            validateSelectorType(feature.selector(), bean, beanManager, definitionError);</span>
+<span class="fc bfc" id="L149" title="All 4 branches covered.">        } else if (isDefined(feature.propertyKey()) &amp;&amp; !mpConfigAvailable) {</span>
+<span class="fc" id="L150">            definitionError.accept(new IllegalStateException(</span>
+                    &quot;as MicroProfile Config is not available, propertyKey must not be set on bean &quot; + bean));
+<span class="fc bfc" id="L152" title="All 2 branches covered.">        } else if (!isDefined(feature.propertyKey()) &amp;&amp; bean.getTypes().stream().map(FeaturesExtension::toClass)</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">                .noneMatch(Selector.class::isAssignableFrom)) {</span>
+<span class="fc" id="L154">                    definitionError.accept(new IllegalStateException(</span>
+<span class="fc" id="L155">                            bean + &quot; must implement &quot; + Selector.class.getName() + &quot; if no other selector is defined&quot;));</span>
+                }
+<span class="fc bfc" id="L157" title="All 4 branches covered.">        if (isDefined(feature.propertyValue()) &amp;&amp; !isDefined(feature.propertyKey())) {</span>
+<span class="fc" id="L158">            definitionError.accept(new IllegalStateException(</span>
+                    &quot;propertyValue must not be set if propertyKey is not set on bean &quot; + bean));
+        }
+<span class="fc" id="L161">        validateCacheDurationMillisProperty(feature, bean, definitionError);</span>
+<span class="fc" id="L162">    }</span>
+
+    private void validateSelectorType(Class&lt;? extends ContextualSelector&lt;?&gt;&gt; selector, Bean&lt;?&gt; bean,
+            BeanManager beanManager, Consumer&lt;Throwable&gt; definitionError) {
+<span class="fc" id="L166">        beanManager.createAnnotatedType(selector).getTypeClosure()</span>
+<span class="fc" id="L167">                .stream()</span>
+<span class="fc" id="L168">                .filter(type -&gt; type instanceof ParameterizedType parametrizedType</span>
+<span class="fc bfc" id="L169" title="All 4 branches covered.">                        &amp;&amp; ContextualSelector.class.equals(parametrizedType.getRawType()))</span>
+<span class="fc" id="L170">                .map(ParameterizedType.class::cast) //</span>
+<span class="fc" id="L171">                .map(type -&gt; type.getActualTypeArguments()[0]) //</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">                .filter(type -&gt; !bean.getTypes().contains(type)) //</span>
+<span class="fc" id="L173">                .forEach(type -&gt; definitionError.accept(new IllegalStateException(&quot;selector type &quot; + selector.getName()</span>
+<span class="fc" id="L174">                        + &quot; accepts beans with type &quot; + type.getTypeName() + &quot;, which is not a type of the bean &quot; + bean)));</span>
+<span class="fc" id="L175">    }</span>
+
+    private void validateCacheDurationMillisProperty(Feature feature, Bean&lt;?&gt; bean,
+            Consumer&lt;Throwable&gt; definitionError) {
+<span class="fc bfc" id="L179" title="All 4 branches covered.">        if (!mpConfigAvailable &amp;&amp; isDefined(feature.cache().durationMillisProperty())) {</span>
+<span class="fc" id="L180">            definitionError.accept(new IllegalStateException(</span>
+                    &quot;as MicroProfile Config is not available, cache durationMillisProperty must not be set on bean &quot;
+                            + bean));
+        }
+<span class="fc" id="L184">    }</span>
+
+    private static Class&lt;?&gt; toClass(Type type) {
+<span class="fc bfc" id="L187" title="All 2 branches covered.">        if (type instanceof Class) {</span>
+<span class="fc" id="L188">            return (Class&lt;?&gt;) type;</span>
+        }
+<span class="pc bpc" id="L190" title="1 of 2 branches missed.">        if (type instanceof ParameterizedType parameterizedType) {</span>
+<span class="fc" id="L191">            return toClass(parameterizedType.getRawType());</span>
+        }
+<span class="nc" id="L193">        throw new IllegalStateException(&quot;unsupported type &quot; + type);</span>
+    }
+
+    void registerFeatureSelectorBeans(@Priority(LIBRARY_AFTER + 500) @Observes AfterBeanDiscovery abd, BeanManager beanManager) {
+<span class="fc bfc" id="L197" title="All 2 branches covered.">        for (Entry&lt;Type, Set&lt;Bean&lt;?&gt;&gt;&gt; feature : getFeatures().entrySet()) {</span>
+<span class="fc bfc" id="L198" title="All 2 branches covered.">            if (beanManager.getBeans(feature.getKey()).isEmpty()) {</span>
+<span class="fc" id="L199">                BeanConfigurator&lt;Object&gt; configurator = abd.addBean().types(feature.getKey());</span>
+<span class="fc bfc" id="L200" title="All 2 branches covered.">                if (useInterceptor) {</span>
+<span class="fc" id="L201">                    configurator.createWith(</span>
+<span class="fc" id="L202">                            ctx -&gt; createIntercepted(beanManager, feature.getKey(), ctx, feature.getValue()));</span>
+                } else {
+<span class="fc" id="L204">                    configurator //</span>
+<span class="fc" id="L205">                            .scope(FeatureScoped.class) //</span>
+<span class="fc" id="L206">                            .createWith(ctx -&gt; createDummy(beanManager, feature.getKey(), ctx, feature.getValue()));</span>
+                }
+            }
+<span class="fc" id="L209">        }</span>
+<span class="fc" id="L210">    }</span>
+
+    private Map&lt;Type, Set&lt;Bean&lt;?&gt;&gt;&gt; getFeatures() {
+<span class="fc" id="L213">        Map&lt;Type, Set&lt;Bean&lt;?&gt;&gt;&gt; features = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L214" title="All 2 branches covered.">        for (Bean&lt;?&gt; featureBean : featureBeans) {</span>
+<span class="fc bfc" id="L215" title="All 2 branches covered.">            for (Type type : featureBean.getTypes()) {</span>
+<span class="fc bfc" id="L216" title="All 6 branches covered.">                if (!Object.class.equals(type) &amp;&amp; !ContextualSelector.class.equals(type)</span>
+<span class="fc" id="L217">                        &amp;&amp; !(type instanceof ParameterizedType parametrizedType</span>
+<span class="fc bfc" id="L218" title="All 2 branches covered.">                                &amp;&amp; ContextualSelector.class.equals(parametrizedType.getRawType()))</span>
+<span class="fc bfc" id="L219" title="All 4 branches covered.">                        &amp;&amp; !Selector.class.equals(type) &amp;&amp; !ThrowableSelector.class.equals(type)) {</span>
+<span class="fc" id="L220">                    features.computeIfAbsent(type, t -&gt; new HashSet&lt;&gt;()).add(featureBean);</span>
+                }
+<span class="fc" id="L222">            }</span>
+<span class="fc" id="L223">        }</span>
+<span class="fc" id="L224">        return features;</span>
+    }
+
+    private &lt;T&gt; T createIntercepted(BeanManager beanManager, Type type, CreationalContext&lt;Object&gt; ctx,
+            Set&lt;Bean&lt;? extends T&gt;&gt; value) {
+        // register target beans
+<span class="fc" id="L230">        invokerFactory.addInstanceFactory(beanManager, type,</span>
+<span class="fc" id="L231">                creationContext -&gt; getFeatureInstances(beanManager, type, creationContext, value));</span>
+        @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L233">        InterceptionFactory&lt;T&gt; interceptionFactory = beanManager.createInterceptionFactory(ctx,</span>
+<span class="fc" id="L234">                value.stream().filter(invokerFactory::isManagedBean).map(Bean::getBeanClass).map(Class.class::cast)</span>
+<span class="fc" id="L235">                        .findFirst().orElseGet(() -&gt; toClass(type)));</span>
+<span class="fc" id="L236">        interceptionFactory.configure().add(FeatureSelector.Literal.INSTANCE);</span>
+<span class="fc" id="L237">        return interceptionFactory.createInterceptedInstance(null);</span>
+    }
+
+    private &lt;T&gt; T createDummy(BeanManager beanManager, Type type, CreationalContext&lt;Object&gt; ctx,
+            Set&lt;Bean&lt;? extends T&gt;&gt; features) {
+<span class="fc" id="L242">        Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances = getFeatureInstances(beanManager, type, ctx, features);</span>
+        @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L244">        Bean&lt;T&gt; ownBean = (Bean&lt;T&gt;) beanManager.resolve(beanManager.getBeans(type));</span>
+<span class="fc" id="L245">        context.setInstances(ownBean, new FeatureInstances&lt;&gt;(instances, getSelectors(beanManager, ctx, instances),</span>
+<span class="fc" id="L246">                getCache(beanManager, ctx)));</span>
+<span class="fc" id="L247">        return instances.values().iterator().next().get();</span>
+    }
+
+    private static Cache getCache(BeanManager beanManager, CreationalContext&lt;?&gt; ctx) {
+<span class="fc" id="L251">        return (Cache) beanManager.getReference(beanManager.resolve(beanManager.getBeans(Cache.class)), Cache.class,</span>
+                ctx);
+    }
+
+    private static &lt;T&gt; Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; getFeatureInstances(BeanManager beanManager, Type type,
+            CreationalContext&lt;?&gt; ctx, Set&lt;Bean&lt;? extends T&gt;&gt; features) {
+<span class="fc" id="L257">        return features.stream().collect(toMap(identity(), bean -&gt; {</span>
+            @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L259">            T instance = (T) beanManager.getReference(bean, type, ctx);</span>
+<span class="fc" id="L260">            return () -&gt; instance;</span>
+        }));
+    }
+
+    private static &lt;T&gt; Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; getSelectors(BeanManager beanManager,
+            CreationalContext&lt;?&gt; ctx, Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances) {
+<span class="fc" id="L266">        Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; selectors = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L267" title="All 2 branches covered.">        for (Entry&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instance : instances.entrySet()) {</span>
+<span class="fc" id="L268">            Feature feature = feature(instance.getKey()).orElseThrow();</span>
+            ContextualSelector&lt;?&gt; selector;
+<span class="fc bfc" id="L270" title="All 2 branches covered.">            if (feature.remaining()) {</span>
+<span class="fc" id="L271">                selector = null;</span>
+<span class="fc bfc" id="L272" title="All 2 branches covered.">            } else if (hasDefinedSelector(feature)) {</span>
+<span class="fc" id="L273">                Set&lt;Bean&lt;?&gt;&gt; beans = beanManager.getBeans(feature.selector());</span>
+<span class="fc bfc" id="L274" title="All 2 branches covered.">                if (beans.isEmpty()) {</span>
+<span class="fc" id="L275">                    selector = createInstance(feature.selector());</span>
+                } else {
+<span class="fc" id="L277">                    selector = (ContextualSelector&lt;?&gt;) beanManager.getReference(beanManager.resolve(beans),</span>
+                            GENERIC_CONTEXTUAL_SELECTOR_TYPE, ctx);
+                }
+<span class="fc bfc" id="L280" title="All 2 branches covered.">            } else if (isDefined(feature.propertyKey())) {</span>
+<span class="fc" id="L281">                selector = (ContextualSelector&lt;?&gt;) beanManager.getReference(</span>
+<span class="fc" id="L282">                        beanManager.resolve(beanManager.getBeans(ConfigurationSelector.class)),</span>
+                        ContextualSelector.class, ctx);
+            } else {
+<span class="fc" id="L285">                selector = (Selector) instance.getValue().get();</span>
+            }
+            @SuppressWarnings(&quot;unchecked&quot;) // is checked in the validate method
+<span class="fc" id="L288">            ContextualSelector&lt;? super T&gt; contextualSelector = (ContextualSelector&lt;? super T&gt;) selector;</span>
+<span class="fc" id="L289">            selectors.put(instance.getKey(), contextualSelector);</span>
+<span class="fc" id="L290">        }</span>
+<span class="fc" id="L291">        return selectors;</span>
+    }
+
+    static &lt;T&gt; T createInstance(Class&lt;T&gt; clazz) {
+        try {
+<span class="fc" id="L296">            return clazz.getConstructor().newInstance();</span>
+<span class="nc" id="L297">        } catch (InstantiationException | IllegalAccessException | InvocationTargetException</span>
+                | NoSuchMethodException e) {
+<span class="nc" id="L299">            throw new IllegalStateException(&quot;Failed to create selector pojo instance &quot; + clazz, e);</span>
+        }
+    }
+
+    static boolean hasDefinedSelector(Feature feature) {
+<span class="fc bfc" id="L304" title="All 2 branches covered.">        return !Selector.class.equals(feature.selector());</span>
+    }
+
+    void registerContext(@Observes AfterBeanDiscovery abd) {
+<span class="fc" id="L308">        abd.addContext(context);</span>
+        try {
+<span class="fc" id="L310">            Class&lt;?&gt; shutdownEvent = Class.forName(&quot;jakarta.enterprise.event.Shutdown&quot;, false,</span>
+<span class="fc" id="L311">                    getClass().getClassLoader());</span>
+<span class="fc" id="L312">            abd.addObserverMethod() //</span>
+<span class="fc" id="L313">                    .observedType(shutdownEvent) //</span>
+<span class="fc" id="L314">                    .priority(LIBRARY_AFTER + 900) //</span>
+<span class="fc" id="L315">                    .notifyWith(event -&gt; context.stop());</span>
+<span class="fc" id="L316">        } catch (ClassNotFoundException e) {</span>
+            // ignore
+<span class="fc" id="L318">        }</span>
+<span class="fc" id="L319">    }</span>
+
+    void stopContext(@Observes BeforeShutdown bs) {
+<span class="fc" id="L322">        context.stop();</span>
+<span class="fc" id="L323">    }</span>
+
+    @FunctionalInterface
+    private interface InstancesFactory&lt;T&gt; {
+        Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; create(CreationalContext&lt;?&gt; ctx);
+    }
+
+<span class="fc" id="L330">    private static class FeatureInvokerFactory {</span>
+<span class="fc" id="L331">        private Map&lt;Bean&lt;?&gt;, InstancesFactory&lt;?&gt;&gt; instancesFactory = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L332">        private Set&lt;Type&gt; registeredTypes = ConcurrentHashMap.newKeySet();</span>
+<span class="fc" id="L333">        private Set&lt;Bean&lt;?&gt;&gt; managedBeans = ConcurrentHashMap.newKeySet();</span>
+
+        public &lt;T&gt; void processFeatureBean(ProcessBean&lt;T&gt; event) {
+<span class="fc bfc" id="L336" title="All 2 branches covered.">            if (event instanceof ProcessManagedBean&lt;T&gt;) {</span>
+<span class="fc" id="L337">                managedBeans.add(event.getBean());</span>
+            }
+<span class="fc" id="L339">        }</span>
+
+        public boolean isManagedBean(Bean&lt;?&gt; bean) {
+<span class="fc" id="L342">            return managedBeans.contains(bean);</span>
+        }
+
+        public &lt;T&gt; void addInstanceFactory(BeanManager beanManager, Type type, InstancesFactory&lt;T&gt; factory) {
+<span class="fc bfc" id="L346" title="All 2 branches covered.">            if (registeredTypes.add(type)) {</span>
+<span class="fc" id="L347">                instancesFactory.putIfAbsent(beanManager.resolve(beanManager.getBeans(type)), factory);</span>
+            }
+<span class="fc" id="L349">        }</span>
+
+        public &lt;T&gt; FeatureInvoker&lt;T&gt; createInvoker(CreationalContext&lt;FeatureInterceptor&gt; ctx, Bean&lt;T&gt; targetBean,
+                BeanManager beanManager) {
+<span class="fc" id="L353">            Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances = getInstances(ctx, targetBean);</span>
+<span class="fc" id="L354">            return new FeatureInvoker&lt;&gt;(targetBean, instances, getSelectors(beanManager, ctx, instances),</span>
+<span class="fc" id="L355">                    getCache(beanManager, ctx));</span>
+        }
+
+        @SuppressWarnings(&quot;unchecked&quot;)
+        protected &lt;T&gt; Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; getInstances(CreationalContext&lt;FeatureInterceptor&gt; ctx,
+                Bean&lt;T&gt; targetBean) {
+<span class="fc" id="L361">            return ((InstancesFactory&lt;T&gt;) instancesFactory.get(targetBean)).create(ctx);</span>
+        }
+    }
+
+    private static class FeatureInvokerInvokerFactory extends FeatureInvokerFactory {
+<span class="fc" id="L366">        private Map&lt;Bean&lt;?&gt;, Map&lt;Method, ? extends Invoker&lt;?, ?&gt;&gt;&gt; invokers = new HashMap&lt;&gt;();</span>
+
+<span class="fc" id="L368">        public FeatureInvokerInvokerFactory() {</span>
+<span class="fc" id="L369">            Invoker.class.getName(); // ensure that the Invoker class is available</span>
+<span class="fc" id="L370">        }</span>
+
+        @Override
+        public &lt;T&gt; void processFeatureBean(ProcessBean&lt;T&gt; event) {
+<span class="fc" id="L374">            super.processFeatureBean(event);</span>
+<span class="fc bfc" id="L375" title="All 2 branches covered.">            if (event instanceof ProcessManagedBean&lt;T&gt; processManagedBean) {</span>
+<span class="fc" id="L376">                Map&lt;Method, Invoker&lt;?, ?&gt;&gt; beanInvokers = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L377" title="All 2 branches covered.">                processManagedBean.getAnnotatedBeanClass().getMethods().stream().filter(method -&gt; !method.isStatic())</span>
+<span class="fc" id="L378">                        .forEach(method -&gt; beanInvokers.put(method.getJavaMember(),</span>
+<span class="fc" id="L379">                                processManagedBean.createInvoker(method).build()));</span>
+<span class="fc" id="L380">                invokers.put(processManagedBean.getBean(), beanInvokers);</span>
+            }
+<span class="fc" id="L382">        }</span>
+
+        @Override
+        public &lt;T&gt; FeatureInvoker&lt;T&gt; createInvoker(CreationalContext&lt;FeatureInterceptor&gt; ctx, Bean&lt;T&gt; targetBean,
+                BeanManager beanManager) {
+<span class="fc" id="L387">            Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances = getInstances(ctx, targetBean);</span>
+<span class="fc" id="L388">            return new FeatureInvokerInvoker&lt;&gt;(targetBean, instances, getSelectors(beanManager, ctx, instances),</span>
+<span class="fc" id="L389">                    getCache(beanManager, ctx), invokers);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>
