@@ -17,9 +17,9 @@ public class ArcFeatureCreator {
 
     public static &lt;T&gt; T create(SyntheticCreationalContext&lt;T&gt; context, TypeLiteral&lt;Instance&lt;T&gt;&gt; instanceType,
             Bean&lt;T&gt; ownBean, Feature featureLiteral) {
-<span class="fc" id="L20">        Instance&lt;T&gt; instance = context.getInjectedReference(instanceType, featureLiteral);</span>
-<span class="fc" id="L21">        return FeatureCreator.create(ownBean, instance.handlesStream(), context::getInjectedReference);</span>
+<span class="nc" id="L20">        Instance&lt;T&gt; instance = context.getInjectedReference(instanceType, featureLiteral);</span>
+<span class="nc" id="L21">        return FeatureCreator.create(ownBean, instance.handlesStream(), context::getInjectedReference, null);</span>
     }
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

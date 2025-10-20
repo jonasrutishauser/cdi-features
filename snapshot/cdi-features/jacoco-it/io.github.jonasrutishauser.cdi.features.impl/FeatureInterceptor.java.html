@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FeatureInterceptor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CDI Features</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features.impl</a> &gt; <span class="el_source">FeatureInterceptor.java</span></div><h1>FeatureInterceptor.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features.impl;
+
+import static jakarta.interceptor.Interceptor.Priority.PLATFORM_BEFORE;
+
+import jakarta.annotation.Priority;
+import jakarta.enterprise.inject.Intercepted;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.inject.Inject;
+import jakarta.interceptor.AroundInvoke;
+import jakarta.interceptor.Interceptor;
+import jakarta.interceptor.InvocationContext;
+
+@Priority(PLATFORM_BEFORE - 900)
+@Interceptor
+@FeatureSelector
+class FeatureInterceptor {
+
+<span class="fc" id="L18">    static final ThreadLocal&lt;FeatureInterceptor&gt; CURRENT = new ThreadLocal&lt;&gt;();</span>
+
+    private final Bean&lt;?&gt; targetBean;
+    private FeatureInvoker&lt;?&gt; invoker;
+
+    @Inject
+<span class="fc" id="L24">    FeatureInterceptor(@Intercepted Bean&lt;?&gt; targetBean) {</span>
+<span class="fc" id="L25">        this.targetBean = targetBean;</span>
+<span class="fc" id="L26">        CURRENT.set(this);</span>
+<span class="fc" id="L27">    }</span>
+
+    Bean&lt;?&gt; getTargetBean() {
+<span class="fc" id="L30">        return targetBean;</span>
+    }
+
+    void setInvoker(FeatureInvoker&lt;?&gt; invoker) {
+<span class="fc" id="L34">        this.invoker = invoker;</span>
+<span class="fc" id="L35">        CURRENT.remove();</span>
+<span class="fc" id="L36">    }</span>
+
+    @AroundInvoke
+    Object intercept(InvocationContext context) throws Exception {
+<span class="fc" id="L40">        return invoker.invoke(context);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

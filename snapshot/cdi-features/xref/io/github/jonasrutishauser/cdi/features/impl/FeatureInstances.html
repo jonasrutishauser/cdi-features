@@ -26,7 +26,7 @@
 <a class="jxr_linenumber" name="L18" href="#L18">18</a>  <strong class="jxr_keyword">import</strong> jakarta.enterprise.inject.spi.BeanAttributes;
 <a class="jxr_linenumber" name="L19" href="#L19">19</a>  
 <a class="jxr_linenumber" name="L20" href="#L20">20</a>  <strong class="jxr_keyword">class</strong> FeatureInstances&lt;T&gt; {
-<a class="jxr_linenumber" name="L21" href="#L21">21</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> Map&lt;Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt;, Supplier&lt;T&gt;&gt; instances;
+<a class="jxr_linenumber" name="L21" href="#L21">21</a>      <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">final</strong> Map&lt;Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt;, Supplier&lt;T&gt;&gt; instances;
 <a class="jxr_linenumber" name="L22" href="#L22">22</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> Map&lt;Bean&lt;? <strong class="jxr_keyword">extends</strong> T&gt;, ContextualSelector&lt;? <strong class="jxr_keyword">super</strong> T&gt;&gt; selectors;
 <a class="jxr_linenumber" name="L23" href="#L23">23</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <a name="Cache" href="../../../../../../io/github/jonasrutishauser/cdi/features/impl/Cache.html#Cache">Cache</a> cache;
 <a class="jxr_linenumber" name="L24" href="#L24">24</a>  
@@ -41,7 +41,7 @@
 <a class="jxr_linenumber" name="L33" href="#L33">33</a>          <strong class="jxr_keyword">return</strong> instances.get(selectedBean(contextual)).get();
 <a class="jxr_linenumber" name="L34" href="#L34">34</a>      }
 <a class="jxr_linenumber" name="L35" href="#L35">35</a>  
-<a class="jxr_linenumber" name="L36" href="#L36">36</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">synchronized</strong> Bean&lt;?&gt; selectedBean(Contextual&lt;T&gt; contextual) {
+<a class="jxr_linenumber" name="L36" href="#L36">36</a>      <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">synchronized</strong> Bean&lt;?&gt; selectedBean(Contextual&lt;T&gt; contextual) {
 <a class="jxr_linenumber" name="L37" href="#L37">37</a>          <strong class="jxr_keyword">return</strong> cache.compute(contextual, selectors.keySet(), <strong class="jxr_keyword">this</strong>::isSelected,
 <a class="jxr_linenumber" name="L38" href="#L38">38</a>                  bean -&gt; cacheDurationInMillis(contextual, bean));
 <a class="jxr_linenumber" name="L39" href="#L39">39</a>      }

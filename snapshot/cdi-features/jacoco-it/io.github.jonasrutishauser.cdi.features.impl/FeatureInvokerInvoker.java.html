@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FeatureInvokerInvoker.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CDI Features</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features.impl</a> &gt; <span class="el_source">FeatureInvokerInvoker.java</span></div><h1>FeatureInvokerInvoker.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features.impl;
+
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Supplier;
+
+import io.github.jonasrutishauser.cdi.features.ContextualSelector;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.enterprise.invoke.Invoker;
+import jakarta.interceptor.InvocationContext;
+
+class FeatureInvokerInvoker&lt;T&gt; extends FeatureInvoker&lt;T&gt; {
+
+    private Map&lt;Bean&lt;?&gt;, Map&lt;Method, ? extends Invoker&lt;?, ?&gt;&gt;&gt; invokers;
+
+    public FeatureInvokerInvoker(Bean&lt;T&gt; targetBean, Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances,
+            Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; selectors, Cache cache,
+            Map&lt;Bean&lt;?&gt;, Map&lt;Method, ? extends Invoker&lt;?, ?&gt;&gt;&gt; invokers) {
+<span class="fc" id="L20">        super(targetBean, instances, selectors, cache);</span>
+<span class="fc" id="L21">        this.invokers = invokers;</span>
+<span class="fc" id="L22">    }</span>
+
+    @Override
+    protected Object invoke(InvocationContext context, Bean&lt;?&gt; selectedBean, T target) throws Exception {
+        @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L27">        Map&lt;Method, Invoker&lt;T, ?&gt;&gt; selectedInvokers = (Map&lt;Method, Invoker&lt;T, ?&gt;&gt;) invokers.get(selectedBean);</span>
+<span class="fc bfc" id="L28" title="All 2 branches covered.">        if (selectedInvokers != null) {</span>
+<span class="fc" id="L29">            Method method = context.getMethod();</span>
+<span class="fc" id="L30">            Invoker&lt;T, ?&gt; invoker = selectedInvokers.get(method);</span>
+<span class="fc bfc" id="L31" title="All 2 branches covered.">            if (invoker == null) {</span>
+<span class="fc" id="L32">                invoker = selectedInvokers.entrySet().stream() //</span>
+<span class="fc bfc" id="L33" title="All 2 branches covered.">                        .filter(entry -&gt; entry.getKey().getName().equals(method.getName())</span>
+<span class="fc bfc" id="L34" title="All 2 branches covered.">                                &amp;&amp; Arrays.equals(entry.getKey().getParameterTypes(), method.getParameterTypes())</span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">                                &amp;&amp; entry.getKey().getReturnType().equals(method.getReturnType())) //</span>
+<span class="fc" id="L36">                        .map(Map.Entry::getValue) //</span>
+<span class="fc" id="L37">                        .findFirst() //</span>
+<span class="fc" id="L38">                        .orElseThrow(() -&gt; new IllegalStateException(&quot;No method found: &quot; + method));</span>
+            }
+<span class="fc" id="L40">            return invoker.invoke(target, context.getParameters());</span>
+        }
+<span class="fc" id="L42">        return super.invoke(context, selectedBean, target);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

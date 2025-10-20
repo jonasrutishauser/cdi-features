@@ -18,7 +18,7 @@ import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanAttributes;
 
 class FeatureInstances&lt;T&gt; {
-    private final Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances;
+    protected final Map&lt;Bean&lt;? extends T&gt;, Supplier&lt;T&gt;&gt; instances;
     private final Map&lt;Bean&lt;? extends T&gt;, ContextualSelector&lt;? super T&gt;&gt; selectors;
     private final Cache cache;
 
@@ -33,7 +33,7 @@ class FeatureInstances&lt;T&gt; {
 <span class="fc" id="L33">        return instances.get(selectedBean(contextual)).get();</span>
     }
 
-    private synchronized Bean&lt;?&gt; selectedBean(Contextual&lt;T&gt; contextual) {
+    protected synchronized Bean&lt;?&gt; selectedBean(Contextual&lt;T&gt; contextual) {
 <span class="fc" id="L37">        return cache.compute(contextual, selectors.keySet(), this::isSelected,</span>
 <span class="fc" id="L38">                bean -&gt; cacheDurationInMillis(contextual, bean));</span>
     }
@@ -98,4 +98,4 @@ class FeatureInstances&lt;T&gt; {
         }
     }
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>
