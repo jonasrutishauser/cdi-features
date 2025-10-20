@@ -2,23 +2,29 @@ package io.github.jonasrutishauser.cdi.features.deployment;
 
 import static io.github.jonasrutishauser.cdi.features.impl.ArcFeatureCreator.CACHE_CLASS;
 import static io.github.jonasrutishauser.cdi.features.impl.ArcFeatureCreator.CONFIGURATION_SELECTOR_CLASS;
+import static io.github.jonasrutishauser.cdi.features.impl.ArcInterceptedFeatureCreator.FEATURE_INVOKER_CLASS;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTransformation;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
+import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.ParameterizedType;
 import org.jboss.jandex.Type;
 import org.jboss.jandex.Type.Kind;
+import org.jboss.logging.Logger;
+import org.objectweb.asm.Opcodes;
 
 import io.github.jonasrutishauser.cdi.features.Feature;
 import io.github.jonasrutishauser.cdi.features.Selector;
 import io.github.jonasrutishauser.cdi.features.impl.ArcFeatureCreator;
+import io.github.jonasrutishauser.cdi.features.impl.ArcInterceptedFeatureCreator;
 import io.github.jonasrutishauser.cdi.features.impl.FeatureScoped;
 import io.github.jonasrutishauser.cdi.features.impl.Identified;
 import io.quarkus.arc.SyntheticCreationalContext;
@@ -32,9 +38,14 @@ import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.deployment.GeneratedClassGizmoAdaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.builditem.BytecodeTransformerBuildItem;
+import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import io.quarkus.gizmo.ClassCreator;
+import io.quarkus.gizmo.ClassTransformer;
+import io.quarkus.gizmo.FieldDescriptor;
+import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.SignatureBuilder;
 import jakarta.enterprise.inject.Default;
@@ -42,10 +53,13 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.enterprise.util.TypeLiteral;
+import jakarta.interceptor.InvocationContext;
 
 public class CdiFeaturesExtensionProcessor {
 
     private static final String FEATURE = "cdi-features";
+
+    private static final Logger LOG = Logger.getLogger(CdiFeaturesExtensionProcessor.class);
 
     @BuildStep
     FeatureBuildItem feature() {
@@ -60,10 +74,64 @@ public class CdiFeaturesExtensionProcessor {
                                 AnnotationInstance.builder(Identified.class).value(0l).build())));
     }
 
+    static class UseInterceptor implements BooleanSupplier {
+        CdiFeaturesConfiguration configuration;
+
+        @Override
+        public boolean getAsBoolean() {
+            return configuration.useInterceptor();
+        }
+    }
+
+    @BuildStep(onlyIf = UseInterceptor.class)
+    void useInvocationContextTargetIfPossible(CombinedIndexBuildItem index,
+            BuildProducer<GeneratedClassBuildItem> generatedClass,
+            BuildProducer<BytecodeTransformerBuildItem> bytcodeTransformer, CdiFeaturesConfiguration configuration) {
+        ClassInfo invocationContext = index.getComputingIndex()
+                .getClassByName("io.quarkus.arc.impl.AbstractInvocationContext");
+        FieldInfo targetField = invocationContext == null ? null : invocationContext.field("target");
+        if (targetField == null) {
+            LOG.warn("Could not find target field in AbstractInvocationContext, intercepted features will use reflection");
+        } else {
+            GeneratedClassGizmoAdaptor classGizmoAdaptor = new GeneratedClassGizmoAdaptor(generatedClass, false);
+            String className = "io.quarkus.arc.impl.InvocationContext_Target_Setter";
+            MethodDescriptor setTargetMethod = MethodDescriptor.ofMethod(className, "setTarget", void.class,
+                    InvocationContext.class, Object.class);
+            try (ClassCreator setterClass = ClassCreator.builder().classOutput(classGizmoAdaptor).className(className)
+                    .build()) {
+                MethodCreator setter = setterClass.getMethodCreator(setTargetMethod)
+                        .setModifiers(Opcodes.ACC_STATIC | Opcodes.ACC_PUBLIC);
+                setter.writeInstanceField(FieldDescriptor.of(targetField), setter.getMethodParam(0),
+                        setter.getMethodParam(1));
+                setter.returnNull();
+            }
+
+            // change invoke method to use the setter and then call proceed()
+            ClassTransformer ct = new ClassTransformer(FEATURE_INVOKER_CLASS);
+            MethodDescriptor invokeDescriptor = MethodDescriptor.ofMethod(FEATURE_INVOKER_CLASS, "invoke", Object.class,
+                    InvocationContext.class, Bean.class, Object.class);
+            ct.removeMethod(invokeDescriptor);
+
+            MethodCreator invokeMethod = ct.addMethod(invokeDescriptor).setModifiers(Opcodes.ACC_PROTECTED)
+                    .addException(Exception.class);
+            // set the target
+            invokeMethod.invokeStaticMethod(setTargetMethod, invokeMethod.getMethodParam(0),
+                    invokeMethod.getMethodParam(2));
+            // call proceed
+            invokeMethod.returnValue(invokeMethod.invokeInterfaceMethod(
+                    MethodDescriptor.ofMethod(InvocationContext.class, "proceed", Object.class),
+                    invokeMethod.getMethodParam(0)));
+
+            bytcodeTransformer.produce(new BytecodeTransformerBuildItem.Builder().setCacheable(true)
+                    .setClassToTransform(FEATURE_INVOKER_CLASS)
+                    .setVisitorFunction((ignored, visitor) -> ct.applyTo(visitor)).build());
+        }
+    }
+
     @BuildStep
     void improveFeatureBeans(BeanDiscoveryFinishedBuildItem discoveryFinished,
             BeanRegistrationPhaseBuildItem beanRegistrationPhase, BuildProducer<SyntheticBeanBuildItem> syntheticBean,
-            BuildProducer<GeneratedClassBuildItem> generatedClass) {
+            BuildProducer<GeneratedClassBuildItem> generatedClass, CdiFeaturesConfiguration configuration) {
         AnnotationLiteralProcessor annotationLiteralProcessor = beanRegistrationPhase.getBeanProcessor()
                 .getAnnotationLiteralProcessor();
         Type objectType = Type.create(Object.class);
@@ -87,22 +155,26 @@ public class CdiFeaturesExtensionProcessor {
                     .build().close();
             ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem.configure(bean.getBeanClass()) //
                     .types(bean.getTypes().toArray(Type[]::new)) //
-                    .scope(FeatureScoped.class) //
                     .addInjectionPoint(instanceType, featureAnnotation) //
-                    .addInjectionPoint(Type.create(BeanManager.class)) //
-                    .addInjectionPoint(Type.create(DotName.createSimple(CACHE_CLASS), Kind.CLASS)) //
-                    .creator(mc -> {
-                        MethodDescriptor create = MethodDescriptor.ofMethod(ArcFeatureCreator.class, "create",
-                                Object.class, SyntheticCreationalContext.class, TypeLiteral.class, Bean.class,
-                                Feature.class);
-                        MethodDescriptor instanceLiteralConstructor = MethodDescriptor
-                                .ofConstructor(instanceTypeLiteralName);
-                        mc.returnValue(mc.invokeStaticMethod(create, //
-                                mc.getMethodParam(0), //
-                                mc.newInstance(instanceLiteralConstructor), //
-                                mc.getThis(),
-                                annotationLiteralProcessor.create(mc, featureClass.get(), featureAnnotation)));
-                    });
+                    .addInjectionPoint(Type.create(DotName.createSimple(CACHE_CLASS), Kind.CLASS));
+            Class<?> creatorClass;
+            if (configuration.useInterceptor()) {
+                creatorClass = ArcInterceptedFeatureCreator.class;
+                configurator.injectInterceptionProxy(
+                        DotName.createSimple(ArcInterceptedFeatureCreator.BINDING_SOURCE_CLASS));
+            } else {
+                creatorClass = ArcFeatureCreator.class;
+                configurator.scope(FeatureScoped.class).addInjectionPoint(Type.create(BeanManager.class));
+            }
+            configurator.creator(mc -> {
+                MethodDescriptor create = MethodDescriptor.ofMethod(creatorClass, "create", Object.class,
+                        SyntheticCreationalContext.class, TypeLiteral.class, Bean.class, Feature.class);
+                MethodDescriptor instanceLiteralConstructor = MethodDescriptor.ofConstructor(instanceTypeLiteralName);
+                mc.returnValue(mc.invokeStaticMethod(create, //
+                        mc.getMethodParam(0), //
+                        mc.newInstance(instanceLiteralConstructor), //
+                        mc.getThis(), annotationLiteralProcessor.create(mc, featureClass.get(), featureAnnotation)));
+            });
             addSelectors(configurator, discoveryFinished, beanType, featureAnnotation);
             syntheticBean.produce(configurator.done());
         });

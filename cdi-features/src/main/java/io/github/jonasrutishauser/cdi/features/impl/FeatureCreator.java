@@ -16,7 +16,9 @@ import java.util.stream.Stream;
 
 import io.github.jonasrutishauser.cdi.features.ContextualSelector;
 import io.github.jonasrutishauser.cdi.features.Feature;
+import io.github.jonasrutishauser.cdi.features.NoSelectedFeatureException;
 import io.github.jonasrutishauser.cdi.features.Selector;
+import io.quarkus.arc.InterceptionProxy;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.Instance.Handle;
 import jakarta.enterprise.inject.build.compatible.spi.Parameters;
@@ -25,7 +27,7 @@ import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanContainer;
 import jakarta.enterprise.inject.spi.BeanManager;
 
-public class FeatureCreator implements SyntheticBeanCreator<Object>  {
+public class FeatureCreator implements SyntheticBeanCreator<Object> {
 
     static final String IDENTIFIER = "identfier";
     static final String BEANS_IDENTIFIER = "beans.identfier";
@@ -35,14 +37,32 @@ public class FeatureCreator implements SyntheticBeanCreator<Object>  {
         <T> T getReference(Class<T> type) throws IllegalArgumentException;
     }
 
-    static <T> T create(Bean<T> ownBean, Stream<? extends Handle<? extends T>> instancesStream, Lookup lookup) {
+    static <T> T create(Bean<T> ownBean, Stream<? extends Handle<? extends T>> instancesStream, Lookup lookup,
+            InterceptionProxy<T> proxy) {
         Map<Bean<? extends T>, Supplier<T>> instances = instancesStream
                 .collect(Collectors.toMap(Handle::getBean, handle -> handle::get));
         Map<Bean<? extends T>, ContextualSelector<? super T>> selectors = getSelectors(lookup, instances);
-        FeatureContext context = (FeatureContext) lookup.getReference(BeanManager.class)
-                .getContext(FeatureScoped.class);
-        context.setInstances(ownBean, new FeatureInstances<>(instances, selectors, lookup.getReference(Cache.class)));
-        return instances.values().iterator().next().get();
+        Cache cache = lookup.getReference(Cache.class);
+        if (proxy == null) {
+            FeatureContext context = (FeatureContext) lookup.getReference(BeanManager.class)
+                    .getContext(FeatureScoped.class);
+            FeatureInstances<T> features = new FeatureInstances<>(instances, selectors, cache);
+            context.setInstances(ownBean, features);
+            return getSelected(ownBean, features);
+        } else {
+            FeatureInvoker<T> invoker = new FeatureInvoker<>(ownBean, instances, selectors, cache);
+            T result = proxy.create(getSelected(ownBean, invoker));
+            FeatureInterceptor.CURRENT.get().setInvoker(invoker);
+            return result;
+        }
+    }
+
+    private static <T> T getSelected(Bean<T> ownBean, FeatureInstances<T> features) {
+        try {
+            return features.selected(ownBean);
+        } catch (NoSelectedFeatureException e) {
+            return features.instances.values().iterator().next().get();
+        }
     }
 
     private static <T> Map<Bean<? extends T>, ContextualSelector<? super T>> getSelectors(Lookup lookup,
@@ -90,6 +110,6 @@ public class FeatureCreator implements SyntheticBeanCreator<Object>  {
                         }
                         return instance.get();
                     }
-                });
+                }, null);
     }
 }

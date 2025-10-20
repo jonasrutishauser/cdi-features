@@ -8,7 +8,7 @@
 	</parent>
 
 	<artifactId>cdi-features-parent</artifactId>
-	<version>1.0.1-SNAPSHOT</version>
+	<version>1.1.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<url>${url}</url>
@@ -18,8 +18,8 @@
 	<properties>
 		<maven.compiler.release>17</maven.compiler.release>
 
-		<quarkus.core.min>3.25</quarkus.core.min>
-		<quarkus.version>${quarkus.core.min}.2</quarkus.version>
+		<quarkus.core.min>3.28</quarkus.core.min>
+		<quarkus.version>${quarkus.core.min}.0</quarkus.version>
 
 		<root.artifactId>cdi-features</root.artifactId>
 	</properties>

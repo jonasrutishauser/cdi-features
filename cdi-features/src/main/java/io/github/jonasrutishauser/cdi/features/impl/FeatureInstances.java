@@ -18,7 +18,7 @@ import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanAttributes;
 
 class FeatureInstances<T> {
-    private final Map<Bean<? extends T>, Supplier<T>> instances;
+    protected final Map<Bean<? extends T>, Supplier<T>> instances;
     private final Map<Bean<? extends T>, ContextualSelector<? super T>> selectors;
     private final Cache cache;
 
@@ -33,7 +33,7 @@ class FeatureInstances<T> {
         return instances.get(selectedBean(contextual)).get();
     }
 
-    private synchronized Bean<?> selectedBean(Contextual<T> contextual) {
+    protected synchronized Bean<?> selectedBean(Contextual<T> contextual) {
         return cache.compute(contextual, selectors.keySet(), this::isSelected,
                 bean -> cacheDurationInMillis(contextual, bean));
     }

@@ -6,24 +6,31 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.io.IOException;
+import java.util.Collection;
 import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.swing.text.Segment;
 
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.SetSystemProperty;
 
 import io.github.jonasrutishauser.cdi.features.Feature.Cache;
+import io.github.jonasrutishauser.cdi.features.impl.Accessor;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Dependent;
 import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.Produces;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.util.TypeLiteral;
 import jakarta.inject.Inject;
 
-public abstract class AbstractIT {
+public abstract class AbstractIT extends Accessor {
 
     @Inject
     Config config;
@@ -32,7 +39,10 @@ public abstract class AbstractIT {
     SampleFeature sampleFeature;
 
     @Inject
-    Instance<Object> instance;
+    NotAFeature notAFeature;
+
+    @Inject
+    Instance<GenericSampleFeature<?>> instance;
 
     protected void setSelected(int selected) {
         config.setSelected(selected);
@@ -41,7 +51,7 @@ public abstract class AbstractIT {
     @RepeatedTest(3)
     @SetSystemProperty(key = "cache.io.github.jonasrutishauser.cdi.features.AbstractIT$SampleFeature.millis", value="1")
     @SetSystemProperty(key = "feature", value = "31")
-    public void sampleFeature1() throws InterruptedException {
+    public void sampleFeature1() throws InterruptedException, IOException {
         setSelected(1);
 
         assertEquals("SampleFeature1", sampleFeature.test());
@@ -52,7 +62,7 @@ public abstract class AbstractIT {
 
     @RepeatedTest(3)
     @SetSystemProperty(key = "feature", value = "32")
-    public void sampleFeature2() {
+    public void sampleFeature2() throws IOException {
         setSelected(2);
 
         assertEquals("SampleFeature2", sampleFeature.test());
@@ -64,14 +74,14 @@ public abstract class AbstractIT {
     public void sampleFeature3() {
         setSelected(42);
 
-        assertEquals("SampleFeature3", sampleFeature.test());
-        assertEquals("SampleFeature3", sampleFeature.test());
+        assertEquals("SampleFeature3", assertThrows(IOException.class, sampleFeature::test).getMessage());
+        assertEquals("SampleFeature3", assertThrows(IOException.class, sampleFeature::test).getMessage());
     }
 
     @Test
     @SetSystemProperty(key = "feature", value = "some value")
     @SetSystemProperty(key = "feature4", value = "some value")
-    public void sampleFeature4() {
+    public void sampleFeature4() throws IOException {
         setSelected(13);
 
         assertEquals("SampleFeature4", sampleFeature.test());
@@ -80,7 +90,7 @@ public abstract class AbstractIT {
 
     @RepeatedTest(3)
     @SetSystemProperty(key = "feature", value = "42")
-    public void sampleFeatureRemaining() {
+    public void sampleFeatureRemaining() throws IOException {
         setSelected(42);
         do {
             config.setSelected(new Random().nextInt());
@@ -92,7 +102,7 @@ public abstract class AbstractIT {
 
     @RepeatedTest(3)
     @SetSystemProperty(key = "feature", value = "33")
-    public void genericSampleFeature2() {
+    public void genericSampleFeature2() throws IOException {
         setSelected(2);
         @SuppressWarnings("serial")
         Instance<GenericSampleFeature<String>> genericFeatureInstance = instance.select(new TypeLiteral<GenericSampleFeature<String>>() {});
@@ -121,7 +131,7 @@ public abstract class AbstractIT {
     }
 
     @RepeatedTest(3)
-    public void always() {
+    public void always() throws IOException {
         AlwaysFeature.counter.set(0); // reset counter
         @SuppressWarnings("serial")
         StringBuffer result = instance.select(new TypeLiteral<GenericSampleFeature<StringBuffer>>() {}).get().test();
@@ -130,12 +140,13 @@ public abstract class AbstractIT {
     }
 
     @RepeatedTest(3)
-    public void concurrency() {
+    public void concurrency() throws IOException {
         AlwaysFeature.counter.set(0); // reset counter
         @SuppressWarnings("serial")
         GenericSampleFeature<StringBuffer> feature = instance.select(new TypeLiteral<GenericSampleFeature<StringBuffer>>() {}).get();
 
         CountDownLatch latch = new CountDownLatch(1);
+        Collection<Throwable> exceptions = new CopyOnWriteArrayList<>();
         for (int i = 0; i < 10; i++) {
             new Thread(() -> {
                 try {
@@ -143,19 +154,30 @@ public abstract class AbstractIT {
                     assertEquals("always 0", feature.test().toString());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                } catch (Throwable e) {
+                    exceptions.add(e);
                 }
             }).start();
         }
         latch.countDown(); // release all threads
 
         assertEquals("always 0", feature.test().toString());
+        assertTrue(exceptions.isEmpty(), "No exceptions expected, but got: " + exceptions);
     }
 
     @Test
-    public void defaultScoped() {
-        CharSequence result = instance.select(NotAFeature.class).get().test();
+    public void defaultScoped() throws IOException {
+        CharSequence result = notAFeature.test();
 
         assertEquals("default", result);
+    }
+
+    @RepeatedTest(3)
+    public void onlyProducer() throws IOException {
+        @SuppressWarnings("serial")
+        GenericSampleFeature<Segment> producerFeature = instance.select(new TypeLiteral<GenericSampleFeature<Segment>>() {}).get();
+
+        assertEquals("Only", producerFeature.test().toString());
     }
 
     @ApplicationScoped
@@ -196,15 +218,28 @@ public abstract class AbstractIT {
     }
 
     static interface NotAFeature {
-        CharSequence test();
+        CharSequence test() throws IOException;
+
+        default void zzz() {
+            fail("should not be called");
+        }
     }
 
     static interface GenericSampleFeature<T extends CharSequence> extends NotAFeature {
-        T test();
+        default void foo() {
+            fail("should not be called");
+        }
+
+        default void test(String other) {
+            fail("should not be called");
+        }
+
+        T test() throws IOException;
     }
 
-    static interface SampleFeature extends GenericSampleFeature<String> {
-    }
+    abstract static class Intermediate implements GenericSampleFeature<String> {}
+
+    abstract static class SampleFeature extends Intermediate {}
 
     @Dependent
     static class DefaultNotAFeature implements NotAFeature {
@@ -230,6 +265,19 @@ public abstract class AbstractIT {
     }
 
     @Dependent
+    @Feature(selector = NeverSelector.class)
+    static class NeverForAlwaysFeature implements GenericSampleFeature<StringBuffer> {
+        @Override
+        public StringBuffer test() {
+            return fail("should not be called");
+        }
+
+        public void doIt() {
+            fail("should not be called");
+        }
+    }
+
+    @Dependent
     @Feature
     static class AlwaysFeature implements GenericSampleFeature<StringBuffer>, ThrowableSelector {
         static AtomicInteger counter = new AtomicInteger();
@@ -251,8 +299,15 @@ public abstract class AbstractIT {
     }
 
     @Dependent
+    static class OnlyProducerFeature {
+        @Produces
+        @Feature(remaining = true)
+        GenericSampleFeature<Segment> feature = () -> new Segment("OnlyProducer".toCharArray(), 0, 4);
+    }
+
+    @Dependent
     @Feature(cache = @Cache(durationMillisProperty = "cache.${type}.millis"))
-    static class SampleFeature1 implements SampleFeature, Selector {
+    static class SampleFeature1 extends SampleFeature implements Selector {
         private final Config config;
 
         @Inject
@@ -273,7 +328,7 @@ public abstract class AbstractIT {
 
     @Dependent
     @Feature(selector = SampleFeature2Selector.class)
-    static class SampleFeature2 implements SampleFeature {
+    static class SampleFeature2 extends SampleFeature {
         private final Config config;
 
         @Inject
@@ -313,35 +368,44 @@ public abstract class AbstractIT {
         }
     }
 
-    @ApplicationScoped
-    @Feature(propertyKey = "feature", propertyValue = "3", cache = @Cache(durationMillis = 0, durationMillisProperty = "not.defined.property"))
-    static class SampleFeature3 implements SampleFeature {
-        SampleFeature3() {
-        }
+    @Dependent
+    static class SampleFeature3 {
+
+        private final Config config;
 
         @Inject
-        SampleFeature3(Config config) {
+        public SampleFeature3(Config config) {
+            this.config = config;
+        }
+
+        @ApplicationScoped
+        @Feature(propertyKey = "feature", propertyValue = "3", cache = @Cache(durationMillis = 0, durationMillisProperty = "not.defined.property"))
+        @Produces
+        SampleFeature create() {
             config.setFeature3Created();
-        }
-
-        @Override
-        public String test() {
-            return "SampleFeature3";
-        }
-    }
-
-    @ApplicationScoped
-    @Feature(propertyKey = "feature4")
-    static class SampleFeature4 implements SampleFeature {
-        @Override
-        public String test() {
-            return "SampleFeature4";
+            return new SampleFeature() {
+                public String test() throws IOException {
+                    throw new IOException("SampleFeature3");
+                }
+            };
         }
     }
 
     @Dependent
+    static class SampleFeature4 {
+        @ApplicationScoped
+        @Feature(propertyKey = "feature4")
+        @Produces
+        final SampleFeature feature = new SampleFeature() {
+            public String test() {
+                return "SampleFeature4";
+            }
+        };
+    }
+
+    @Dependent
     @Feature(selector = NeverSelector.class)
-    static class SampleFeatureNever implements SampleFeature {
+    static class SampleFeatureNever extends SampleFeature {
         @Override
         public String test() {
             return "SampleFeature3";
@@ -357,7 +421,7 @@ public abstract class AbstractIT {
 
     @ApplicationScoped
     @Feature(remaining = true, cache = @Cache(durationMillis = 0))
-    static class SampleFeatureRemaining implements SampleFeature {
+    static class SampleFeatureRemaining extends SampleFeature {
         @Override
         public String test() {
             return "SampleFeatureRemaining";

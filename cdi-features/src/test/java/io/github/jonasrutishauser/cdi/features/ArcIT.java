@@ -8,7 +8,6 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.quarkus.arc.processor.bcextensions.BuildServicesImpl;
-import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.build.compatible.spi.BuildServicesResolver;
 
 @ExtendWith(ArquillianExtension.class)
@@ -16,16 +15,8 @@ class ArcIT extends AbstractIT {
 
     @Override
     protected void setSelected(int selected) {
-        try {
-            destroy(instance.select(Class.forName(getClass().getPackage().getName() + ".impl.Cache"))); // clear cache
-        } catch (ClassNotFoundException e) {
-            throw new IllegalStateException(e);
-        }
+        clearCache();
         super.setSelected(selected);
-    }
-
-    private <T> void destroy(Instance<T> instance) {
-        instance.destroy(instance.get());
     }
 
     @Deployment
