@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   build:
-    uses: jonasrutishauser/parent/.github/workflows/common-ci.yml@v34
+    uses: jonasrutishauser/parent/.github/workflows/common-ci.yml@v35
     with:
       java-versions: '["17", "21", "24"]'
       deploy-site: ${{ github.event_name == 'push' }}
