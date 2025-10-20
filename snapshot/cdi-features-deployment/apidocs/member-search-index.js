@@ -1,1 +1,1 @@
-memberSearchIndex = [{"p":"io.github.jonasrutishauser.cdi.features.deployment","c":"CdiFeaturesExtensionProcessor","l":"CdiFeaturesExtensionProcessor()","u":"%3Cinit%3E()"}];updateSearchResults();
+memberSearchIndex = [{"p":"io.github.jonasrutishauser.cdi.features.deployment","c":"CdiFeaturesExtensionProcessor","l":"CdiFeaturesExtensionProcessor()","u":"%3Cinit%3E()"},{"p":"io.github.jonasrutishauser.cdi.features.deployment","c":"CdiFeaturesConfiguration","l":"useInterceptor()"}];updateSearchResults();
