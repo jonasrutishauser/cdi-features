@@ -13,6 +13,6 @@ public interface CdiFeaturesConfiguration {
      * Wether to use an interceptor to select the feature implementation (will use a
      * special scope otherwise, which behaves like the application scope).
      */
-    @WithDefault("false")
+    @WithDefault("true")
     boolean useInterceptor();
 }
