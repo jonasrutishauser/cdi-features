@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CdiFeaturesExtensionProcessor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CDI Features Quarkus Extension</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.cdi.features.deployment</a> &gt; <span class="el_source">CdiFeaturesExtensionProcessor.java</span></div><h1>CdiFeaturesExtensionProcessor.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.cdi.features.deployment;
+
+import static io.github.jonasrutishauser.cdi.features.impl.ArcFeatureCreator.CACHE_CLASS;
+import static io.github.jonasrutishauser.cdi.features.impl.ArcFeatureCreator.CONFIGURATION_SELECTOR_CLASS;
+import static io.github.jonasrutishauser.cdi.features.impl.ArcInterceptedFeatureCreator.FEATURE_INVOKER_CLASS;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.BooleanSupplier;
+
+import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationTransformation;
+import org.jboss.jandex.AnnotationValue;
+import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.DotName;
+import org.jboss.jandex.FieldInfo;
+import org.jboss.jandex.ParameterizedType;
+import org.jboss.jandex.Type;
+import org.jboss.jandex.Type.Kind;
+import org.jboss.logging.Logger;
+import org.objectweb.asm.Opcodes;
+
+import io.github.jonasrutishauser.cdi.features.Feature;
+import io.github.jonasrutishauser.cdi.features.Selector;
+import io.github.jonasrutishauser.cdi.features.impl.ArcFeatureCreator;
+import io.github.jonasrutishauser.cdi.features.impl.ArcInterceptedFeatureCreator;
+import io.github.jonasrutishauser.cdi.features.impl.FeatureScoped;
+import io.github.jonasrutishauser.cdi.features.impl.Identified;
+import io.quarkus.arc.SyntheticCreationalContext;
+import io.quarkus.arc.deployment.AnnotationsTransformerBuildItem;
+import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
+import io.quarkus.arc.deployment.BeanRegistrationPhaseBuildItem;
+import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
+import io.quarkus.arc.deployment.SyntheticBeanBuildItem.ExtendedBeanConfigurator;
+import io.quarkus.arc.processor.AnnotationLiteralProcessor;
+import io.quarkus.arc.processor.BeanInfo;
+import io.quarkus.deployment.GeneratedClassGizmoAdaptor;
+import io.quarkus.deployment.annotations.BuildProducer;
+import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.builditem.BytecodeTransformerBuildItem;
+import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
+import io.quarkus.deployment.builditem.FeatureBuildItem;
+import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
+import io.quarkus.gizmo.ClassCreator;
+import io.quarkus.gizmo.ClassTransformer;
+import io.quarkus.gizmo.FieldDescriptor;
+import io.quarkus.gizmo.MethodCreator;
+import io.quarkus.gizmo.MethodDescriptor;
+import io.quarkus.gizmo.SignatureBuilder;
+import jakarta.enterprise.inject.Default;
+import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.enterprise.inject.spi.BeanManager;
+import jakarta.enterprise.util.TypeLiteral;
+import jakarta.interceptor.InvocationContext;
+
+<span class="fc" id="L58">public class CdiFeaturesExtensionProcessor {</span>
+
+    private static final String FEATURE = &quot;cdi-features&quot;;
+
+<span class="fc" id="L62">    private static final Logger LOG = Logger.getLogger(CdiFeaturesExtensionProcessor.class);</span>
+
+    @BuildStep
+    FeatureBuildItem feature() {
+<span class="fc" id="L66">        return new FeatureBuildItem(FEATURE);</span>
+    }
+
+    @BuildStep
+    AnnotationsTransformerBuildItem setQuarkusDeployment() {
+<span class="fc" id="L71">        return new AnnotationsTransformerBuildItem(</span>
+<span class="fc" id="L72">                AnnotationTransformation.forClasses().priority(0).whenClass(DotName.createSimple(CACHE_CLASS))</span>
+<span class="fc" id="L73">                        .transform(t -&gt; t.addAll(AnnotationInstance.builder(Default.class).build(),</span>
+<span class="fc" id="L74">                                AnnotationInstance.builder(Identified.class).value(0l).build())));</span>
+    }
+
+<span class="fc" id="L77">    static class UseInterceptor implements BooleanSupplier {</span>
+        CdiFeaturesConfiguration configuration;
+
+        @Override
+        public boolean getAsBoolean() {
+<span class="fc" id="L82">            return configuration.useInterceptor();</span>
+        }
+    }
+
+    @BuildStep(onlyIf = UseInterceptor.class)
+    void useInvocationContextTargetIfPossible(CombinedIndexBuildItem index,
+            BuildProducer&lt;GeneratedClassBuildItem&gt; generatedClass,
+            BuildProducer&lt;BytecodeTransformerBuildItem&gt; bytcodeTransformer, CdiFeaturesConfiguration configuration) {
+<span class="fc" id="L90">        ClassInfo invocationContext = index.getComputingIndex()</span>
+<span class="fc" id="L91">                .getClassByName(&quot;io.quarkus.arc.impl.AbstractInvocationContext&quot;);</span>
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">        FieldInfo targetField = invocationContext == null ? null : invocationContext.field(&quot;target&quot;);</span>
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">        if (targetField == null) {</span>
+<span class="nc" id="L94">            LOG.warn(&quot;Could not find target field in AbstractInvocationContext, intercepted features will use reflection&quot;);</span>
+        } else {
+<span class="fc" id="L96">            GeneratedClassGizmoAdaptor classGizmoAdaptor = new GeneratedClassGizmoAdaptor(generatedClass, false);</span>
+<span class="fc" id="L97">            String className = &quot;io.quarkus.arc.impl.InvocationContext_Target_Setter&quot;;</span>
+<span class="fc" id="L98">            MethodDescriptor setTargetMethod = MethodDescriptor.ofMethod(className, &quot;setTarget&quot;, void.class,</span>
+                    InvocationContext.class, Object.class);
+<span class="fc" id="L100">            try (ClassCreator setterClass = ClassCreator.builder().classOutput(classGizmoAdaptor).className(className)</span>
+<span class="fc" id="L101">                    .build()) {</span>
+<span class="fc" id="L102">                MethodCreator setter = setterClass.getMethodCreator(setTargetMethod)</span>
+<span class="fc" id="L103">                        .setModifiers(Opcodes.ACC_STATIC | Opcodes.ACC_PUBLIC);</span>
+<span class="fc" id="L104">                setter.writeInstanceField(FieldDescriptor.of(targetField), setter.getMethodParam(0),</span>
+<span class="fc" id="L105">                        setter.getMethodParam(1));</span>
+<span class="fc" id="L106">                setter.returnNull();</span>
+            }
+
+            // change invoke method to use the setter and then call proceed()
+<span class="fc" id="L110">            ClassTransformer ct = new ClassTransformer(FEATURE_INVOKER_CLASS);</span>
+<span class="fc" id="L111">            MethodDescriptor invokeDescriptor = MethodDescriptor.ofMethod(FEATURE_INVOKER_CLASS, &quot;invoke&quot;, Object.class,</span>
+                    InvocationContext.class, Bean.class, Object.class);
+<span class="fc" id="L113">            ct.removeMethod(invokeDescriptor);</span>
+
+<span class="fc" id="L115">            MethodCreator invokeMethod = ct.addMethod(invokeDescriptor).setModifiers(Opcodes.ACC_PROTECTED)</span>
+<span class="fc" id="L116">                    .addException(Exception.class);</span>
+            // set the target
+<span class="fc" id="L118">            invokeMethod.invokeStaticMethod(setTargetMethod, invokeMethod.getMethodParam(0),</span>
+<span class="fc" id="L119">                    invokeMethod.getMethodParam(2));</span>
+            // call proceed
+<span class="fc" id="L121">            invokeMethod.returnValue(invokeMethod.invokeInterfaceMethod(</span>
+<span class="fc" id="L122">                    MethodDescriptor.ofMethod(InvocationContext.class, &quot;proceed&quot;, Object.class),</span>
+<span class="fc" id="L123">                    invokeMethod.getMethodParam(0)));</span>
+
+<span class="fc" id="L125">            bytcodeTransformer.produce(new BytecodeTransformerBuildItem.Builder().setCacheable(true)</span>
+<span class="fc" id="L126">                    .setClassToTransform(FEATURE_INVOKER_CLASS)</span>
+<span class="fc" id="L127">                    .setVisitorFunction((ignored, visitor) -&gt; ct.applyTo(visitor)).build());</span>
+        }
+<span class="fc" id="L129">    }</span>
+
+    @BuildStep
+    void improveFeatureBeans(BeanDiscoveryFinishedBuildItem discoveryFinished,
+            BeanRegistrationPhaseBuildItem beanRegistrationPhase, BuildProducer&lt;SyntheticBeanBuildItem&gt; syntheticBean,
+            BuildProducer&lt;GeneratedClassBuildItem&gt; generatedClass, CdiFeaturesConfiguration configuration) {
+<span class="fc" id="L135">        AnnotationLiteralProcessor annotationLiteralProcessor = beanRegistrationPhase.getBeanProcessor()</span>
+<span class="fc" id="L136">                .getAnnotationLiteralProcessor();</span>
+<span class="fc" id="L137">        Type objectType = Type.create(Object.class);</span>
+<span class="fc" id="L138">        AnnotationInstance featureAnnotation = AnnotationInstance.builder(Feature.class).build();</span>
+<span class="fc" id="L139">        Optional&lt;ClassInfo&gt; featureClass = beanRegistrationPhase.getBeanProcessor().getBeanDeployment().getQualifiers()</span>
+<span class="fc" id="L140">                .stream().filter(c -&gt; DotName.createSimple(Feature.class).equals(c.name())).findAny();</span>
+<span class="fc" id="L141">        GeneratedClassGizmoAdaptor classGizmoAdaptor = new GeneratedClassGizmoAdaptor(generatedClass, true);</span>
+<span class="fc" id="L142">        Map&lt;String, Integer&gt; counter = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L143">        discoveryFinished.beanStream().withQualifier(Identified.class).withScope(FeatureScoped.class).forEach(bean -&gt; {</span>
+<span class="fc bfc" id="L144" title="All 2 branches covered.">            Type beanType = bean.getTypes().stream().filter(t -&gt; !objectType.equals(t)).findAny().get();</span>
+<span class="fc" id="L145">            ParameterizedType instanceType = ParameterizedType.create(Instance.class, beanType);</span>
+<span class="fc" id="L146">            String classNamePrefix = beanType.toString();</span>
+<span class="fc bfc" id="L147" title="All 2 branches covered.">            if (classNamePrefix.contains(&quot;&lt;&quot;)) {</span>
+<span class="fc" id="L148">                classNamePrefix = classNamePrefix.substring(0, classNamePrefix.indexOf('&lt;'));</span>
+            }
+<span class="fc" id="L150">            String instanceTypeLiteralName = classNamePrefix + &quot;$$instanceTypeLiteral$$&quot;</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">                    + counter.compute(classNamePrefix, (key, value) -&gt; value == null ? 0 : ++value);</span>
+<span class="fc" id="L152">            ClassCreator.builder().classOutput(classGizmoAdaptor).className(instanceTypeLiteralName)</span>
+<span class="fc" id="L153">                    .signature(SignatureBuilder.forClass()</span>
+<span class="fc" id="L154">                            .setSuperClass(toGizmo(ParameterizedType.create(TypeLiteral.class, instanceType))))</span>
+<span class="fc" id="L155">                    .build().close();</span>
+<span class="fc" id="L156">            ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem.configure(bean.getBeanClass()) //</span>
+<span class="fc" id="L157">                    .types(bean.getTypes().toArray(Type[]::new)) //</span>
+<span class="fc" id="L158">                    .addInjectionPoint(instanceType, featureAnnotation) //</span>
+<span class="fc" id="L159">                    .addInjectionPoint(Type.create(DotName.createSimple(CACHE_CLASS), Kind.CLASS));</span>
+            Class&lt;?&gt; creatorClass;
+<span class="fc bfc" id="L161" title="All 2 branches covered.">            if (configuration.useInterceptor()) {</span>
+<span class="fc" id="L162">                creatorClass = ArcInterceptedFeatureCreator.class;</span>
+<span class="fc" id="L163">                configurator.injectInterceptionProxy(</span>
+<span class="fc" id="L164">                        DotName.createSimple(ArcInterceptedFeatureCreator.BINDING_SOURCE_CLASS));</span>
+            } else {
+<span class="fc" id="L166">                creatorClass = ArcFeatureCreator.class;</span>
+<span class="fc" id="L167">                configurator.scope(FeatureScoped.class).addInjectionPoint(Type.create(BeanManager.class));</span>
+            }
+<span class="fc" id="L169">            configurator.creator(mc -&gt; {</span>
+<span class="fc" id="L170">                MethodDescriptor create = MethodDescriptor.ofMethod(creatorClass, &quot;create&quot;, Object.class,</span>
+                        SyntheticCreationalContext.class, TypeLiteral.class, Bean.class, Feature.class);
+<span class="fc" id="L172">                MethodDescriptor instanceLiteralConstructor = MethodDescriptor.ofConstructor(instanceTypeLiteralName);</span>
+<span class="fc" id="L173">                mc.returnValue(mc.invokeStaticMethod(create, //</span>
+<span class="fc" id="L174">                        mc.getMethodParam(0), //</span>
+<span class="fc" id="L175">                        mc.newInstance(instanceLiteralConstructor), //</span>
+<span class="fc" id="L176">                        mc.getThis(), annotationLiteralProcessor.create(mc, featureClass.get(), featureAnnotation)));</span>
+<span class="fc" id="L177">            });</span>
+<span class="fc" id="L178">            addSelectors(configurator, discoveryFinished, beanType, featureAnnotation);</span>
+<span class="fc" id="L179">            syntheticBean.produce(configurator.done());</span>
+<span class="fc" id="L180">        });</span>
+<span class="fc" id="L181">    }</span>
+
+    private void addSelectors(ExtendedBeanConfigurator configurator, BeanDiscoveryFinishedBuildItem discoveryFinished,
+            Type beanType, AnnotationInstance featureAnnotation) {
+<span class="fc" id="L185">        Type selectorClass = Type.create(Selector.class);</span>
+<span class="fc" id="L186">        boolean configurationSelectorAdded = false;</span>
+<span class="fc bfc" id="L187" title="All 2 branches covered.">        for (BeanInfo featureBean : discoveryFinished.beanStream().assignableTo(beanType, featureAnnotation)</span>
+<span class="fc" id="L188">                .collect()) {</span>
+<span class="fc" id="L189">            AnnotationInstance feature = featureBean.getQualifier(DotName.createSimple(Feature.class)).orElseThrow();</span>
+<span class="fc" id="L190">            AnnotationValue selectorValue = feature.value(&quot;selector&quot;);</span>
+<span class="fc" id="L191">            AnnotationValue propertyKeyValue = feature.value(&quot;propertyKey&quot;);</span>
+<span class="pc bpc" id="L192" title="1 of 4 branches missed.">            if (selectorValue != null &amp;&amp; !selectorClass.equals(selectorValue.asClass())) {</span>
+<span class="fc bfc" id="L193" title="All 2 branches covered.">                if (!discoveryFinished.beanStream().assignableTo(selectorValue.asClass()).isEmpty()) {</span>
+<span class="fc" id="L194">                    configurator.addInjectionPoint(selectorValue.asClass());</span>
+                }
+            } else
+<span class="pc bpc" id="L197" title="1 of 6 branches missed.">                if (!configurationSelectorAdded &amp;&amp; propertyKeyValue != null &amp;&amp; !propertyKeyValue.asString().isEmpty()) {</span>
+<span class="fc" id="L198">                    configurator.addInjectionPoint(</span>
+<span class="fc" id="L199">                            Type.create(DotName.createSimple(CONFIGURATION_SELECTOR_CLASS), Kind.CLASS));</span>
+<span class="fc" id="L200">                    configurationSelectorAdded = true;</span>
+                }
+<span class="fc" id="L202">        }</span>
+<span class="fc" id="L203">    }</span>
+
+    private io.quarkus.gizmo.Type.ParameterizedType toGizmo(ParameterizedType parameterizedType) {
+<span class="fc" id="L206">        return io.quarkus.gizmo.Type.parameterizedType(io.quarkus.gizmo.Type.classType(parameterizedType.name()),</span>
+<span class="fc" id="L207">                parameterizedType.arguments().stream().map(type -&gt; {</span>
+<span class="fc bfc" id="L208" title="All 2 branches covered.">                    if (type.kind() == Kind.PARAMETERIZED_TYPE) {</span>
+<span class="fc" id="L209">                        return toGizmo(type.asParameterizedType());</span>
+                    } else {
+<span class="fc" id="L211">                        return io.quarkus.gizmo.Type.classType(type.name());</span>
+                    }
+<span class="fc" id="L213">                }).toArray(io.quarkus.gizmo.Type[]::new));</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>
