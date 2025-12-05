@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"io.github.jonasrutishauser.cdi.features"},{"l":"io.github.jonasrutishauser.cdi.features.impl"}];updateSearchResults();
