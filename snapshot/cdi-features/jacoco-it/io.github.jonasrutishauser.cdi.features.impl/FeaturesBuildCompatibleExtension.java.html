@@ -285,7 +285,7 @@ import jakarta.enterprise.lang.model.types.Type;
 
     private Class&lt;?&gt; toClass(Type type) {
         try {
-<span class="fc" id="L288">            return Class.forName(toClassInfo(type).name(), false, getClass().getClassLoader());</span>
+<span class="fc" id="L288">            return Class.forName(toClassInfo(type).name(), false, Thread.currentThread().getContextClassLoader());</span>
 <span class="nc" id="L289">        } catch (ClassNotFoundException e) {</span>
 <span class="nc" id="L290">            throw new IllegalStateException(&quot;unsupported type &quot; + type, e);</span>
         }

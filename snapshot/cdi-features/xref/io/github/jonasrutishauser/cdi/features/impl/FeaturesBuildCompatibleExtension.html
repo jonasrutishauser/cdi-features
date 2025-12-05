@@ -293,7 +293,7 @@
 <a class="jxr_linenumber" name="L285" href="#L285">285</a> 
 <a class="jxr_linenumber" name="L286" href="#L286">286</a>     <strong class="jxr_keyword">private</strong> Class&lt;?&gt; toClass(Type type) {
 <a class="jxr_linenumber" name="L287" href="#L287">287</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L288" href="#L288">288</a>             <strong class="jxr_keyword">return</strong> Class.forName(toClassInfo(type).name(), false, getClass().getClassLoader());
+<a class="jxr_linenumber" name="L288" href="#L288">288</a>             <strong class="jxr_keyword">return</strong> Class.forName(toClassInfo(type).name(), false, Thread.currentThread().getContextClassLoader());
 <a class="jxr_linenumber" name="L289" href="#L289">289</a>         } <strong class="jxr_keyword">catch</strong> (ClassNotFoundException e) {
 <a class="jxr_linenumber" name="L290" href="#L290">290</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalStateException(<span class="jxr_string">"unsupported type "</span> + type, e);
 <a class="jxr_linenumber" name="L291" href="#L291">291</a>         }
