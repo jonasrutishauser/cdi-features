@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>io.github.jonasrutishauser</groupId>
 		<artifactId>cdi-features-parent</artifactId>
-		<version>1.1.1</version>
+		<version>1.1.2-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>cdi-features-deployment</artifactId>
