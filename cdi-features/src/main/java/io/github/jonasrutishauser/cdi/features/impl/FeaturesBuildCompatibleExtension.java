@@ -285,7 +285,7 @@ public class FeaturesBuildCompatibleExtension implements BuildCompatibleExtensio
 
     private Class<?> toClass(Type type) {
         try {
-            return Class.forName(toClassInfo(type).name(), false, getClass().getClassLoader());
+            return Class.forName(toClassInfo(type).name(), false, Thread.currentThread().getContextClassLoader());
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException("unsupported type " + type, e);
         }
